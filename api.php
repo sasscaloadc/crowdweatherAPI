@@ -19,7 +19,8 @@ try {
   		header('HTTP/1.0 401 Unauthorized');
   		die ("Not authorized");
 	} else {
-	error_log("obviously authorized -".$user."- -".$pass."-");
+	error_log("obviously authorized -".$user."- -".$pass."-");i
+		//added this
 	}
 	
 	$args = explode('/', rtrim($_REQUEST['request'], '/'));
