@@ -14,13 +14,12 @@ try {
 
 	$validated = apiDB::validate($user,$pass);
 
-	if ((!$validated) || ($validated <= 0)) {
+	if ($validated < 0) {
   		header('WWW-Authenticate: Basic realm="SASSCAL Weather"');
   		header('HTTP/1.0 401 Unauthorized');
-  		die ("Not authorized");
+  		die ("Not authorized ".$validated);
 	} else {
-	error_log("obviously authorized -".$user."- -".$pass."-");i
-		//added this
+		error_log("AUTHORIZED AS -".$user."- -".$pass."-");
 	}
 	
 	$args = explode('/', rtrim($_REQUEST['request'], '/'));

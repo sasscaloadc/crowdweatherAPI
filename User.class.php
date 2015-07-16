@@ -19,22 +19,41 @@ class User extends RESTObject
 	}
 	
 	public function get_array_all() {
-		return apiDB::getUsers();
+		if ($this->access > 1) {
+			return apiDB::getUsers();
+		} else {                 // only return the user that you have access to
+			$users = Array();
+			$user = apiDB::getUserByEmail( $_SERVER['PHP_AUTH_USER'] );
+			array_push($users, $user);
+			return $users; 
+		}
 	}
 
 	public function put_array($array) {
 		
+		if ($this->access < 1) {
+			return "Not authorized to make any updates : guest account";
+		}
 		$user = new User();
 		
 		if (!empty($array["id"])) {
-			apiDB::getUser($array["id"], $user);
+			$user = apiDB::getUser($array["id"]);
+			if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+				return "Not authorized to update User ".$user->id;
+			}
 		} else {
 			if (!empty($array["email"])) {
-				apiDB::getUserByEmail($array["email"], $user);
+				$user = apiDB::getUserByEmail($array["email"]);
+				if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+					return "Not authorized to update User ".$user->id;
+				}
 			}
 		}
 		$user->email = empty($array["email"]) ? $user->email : $array["email"];
 		$user->password = empty($array["password"]) ? $user->password : $array["password"];
+		if ($this->access > 1) {
+			$user->access = empty($array["access"]) ? $user->access : $array["access"]; // not sure if this is still a security flaw... 
+		}
 		if (empty($user->id)) {
 			return apiDB::addUser($user);
 		} else {
@@ -48,7 +67,9 @@ class User extends RESTObject
 		
 		$user->email = $array["email"];
 		$user->password = $array["password"];
-		
+		// access is 1 by database default
+	
+		//NOTE: No access restrictions. Anyone with a login (also guest:guest) can add a newuser	
 		return apiDB::addUser($user);
 	}
 	
@@ -64,7 +85,19 @@ class User extends RESTObject
 	}
 	
 	public function getInstanceDetails($id) {
-		apiDB::getUser($id, $this);
+		$user = apiDB::getUser($id);
+		if (empty($user->id)) {
+			return self::NO_SUCH_ID;
+		}
+		if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+			return self::ACCESS_DENIED;
+		}
+		$this->id = $user->id;
+		$this->email = $user->email;
+		$this->password = $user->password;
+		$this->locations = $user->locations;
+		// 	Preserving $this->access however, to retain admin rights.
+		return self::SETUP_OK;
 	}
 	
 	/**

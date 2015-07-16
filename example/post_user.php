@@ -1,3 +1,4 @@
+<h2> POST - User </h2>
 <?php
 
 	
@@ -23,22 +24,9 @@
 	}   
 	
 $data = Array();
-$data["id"] = "4";
-$data["email"] = "sasscal@enron.com";
-$data["password"] = "dontspill";
-//$data["locations"] = Array();
-
-//$location = Array();
-//$location["latitude"] = -11.123;
-//$location["longitude"] = 14.2546;
-//$location["name"] = "platteklip";
-//array_push($data["locations"], $location);
-
-//$location = Array();
-//$location["latitude"] = -11.101;
-//$location["longitude"] = 14.25599;
-//$location["name"] = "barndoor";
-//array_push($data["locations"], $location);
+//$data["id"] = "40";
+$data["email"] = "neweruser@gmail.com";
+$data["password"] = "newspace";
 
 $fields = json_encode($data);
 
@@ -48,15 +36,27 @@ $fields = $xmlOut->asXML();
 
 $ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, "http://10.0.0.10/api/users");
+curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/users");
+curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
+//curl_setopt($ch, CURLOPT_USERPWD, "steve@biggerstuff.com:didntspill");
+//curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
 curl_setopt($ch, CURLOPT_POST, true);
 //curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/json", "Content-Length: " . strlen($fields)));
 curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/xml", "Content-Length: " . strlen($fields)));
 curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
 
-curl_exec($ch);
+if ( curl_exec($ch)) {;
+        echo "<br>Done: Success";
+} else {
+        echo "<br>Done: Failure<br>";
+    echo "cURL error : ".curl_error($ch);
+}
 
-	
 ?>
+<br/>
+End
+<br/>
 

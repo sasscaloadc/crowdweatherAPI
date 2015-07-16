@@ -1,3 +1,4 @@
+<h2>PUT - User</h2>
 <?php
 	
 	function arrayToXML(Array $array, SimpleXMLElement &$xml) {
@@ -23,9 +24,10 @@
 	
 
 $data = Array();
-//$data["id"] = "4";
-$data["email"] = "sasscal@enron.com";
-$data["password"] = "didntspill";
+$data["id"] = "2";
+//$data["email"] = "steve@biggerstuff.com";
+//$data["password"] = "didntspilladrop";
+$data["access"] = "2";
 
 
 $fields = json_encode($data);
@@ -36,15 +38,37 @@ $fields = json_encode($data);
 
 $ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, "http://10.0.0.10/api/users");
+//curl_setopt($ch, CURLOPT_URL, "https://erik%40sas.co.na:qwe123@afrihost.sasscal.org/api/users");
+curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/users");
+//curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
+//curl_setopt($ch, CURLOPT_USERPWD, "steve@biggerstuff.com:didntspill");
+curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+//curl_setopt($ch, CURLOPT_CAPATH, "/home/syseng/certificates/"); 
+//curl_setopt($ch, CURLOPT_CAINFO, "/home/syseng/certificates/afrihost.sasscal.org.cert_for_curl.pem"); 
+//curl_setopt($ch, CURLOPT_CAINFO, "/home/syseng/certificates/thawte_CAroot.cert_for_curl.pem"); 
+//curl_setopt($ch, CURLOPT_CAINFO, "/home/syseng/certificates/thawte_intermediate3.cert_for_curl.pem"); 
+//curl_setopt($ch, CURLOPT_CAINFO, "thawte_CAroot.cert_for_curl.pem"); 
+//curl_setopt($ch, CURLOPT_CAINFO, "afrihost.sasscal.org.cert_for_curl.pem"); 
+//curl_setopt($ch, CURLOPT_CAINFO,  getcwd().'/home/syseng/certificates/thawte_intermediate3.crt');
+//curl_setopt($ch, CURLOPT_CAINFO,  getcwd().'/home/syseng/certificates/thawte_intermediate3.cert_for_curl.pem');
+//curl_setopt($ch, CURLOPT_SSLCERT, getcwd().'/home/syseng/certificates/afrihost.sasscal.org.cert_for_curl2.pem');
+//curl_setopt($ch, CURLOPT_SSLCERTPASSWD, '5455c4l_'); 
 
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT'); 
 curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/json", "Content-Length: " . strlen($fields)));
 //curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/xml", "Content-Length: " . strlen($fields)));
 curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
 
-curl_exec($ch);
-
+if ( curl_exec($ch)) {;
+	echo "<br>Done: Success";
+} else {
+	echo "<br>Done: Failure<br>";
+    echo "cURL error : ".curl_error($ch);
+}
 	
 ?>
-
+<br/>
+End
+<br/>

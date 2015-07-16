@@ -8,6 +8,7 @@ abstract class RESTObject
 	const SETUP_OK = 0;
 	const ID_ALREADY_SETUP = 1;
 	const NO_SUCH_ID = 2;
+	const ACCESS_DENIED = 3;
 	
     /**
      * Property: method
@@ -62,8 +63,6 @@ abstract class RESTObject
 	  */
 	abstract function getInstanceDetails($id);
 
-//	abstract function put_array($array);
-
     public function setupClass($args, $access, $ext = 'html') {  // this used to be a constructor, but changed to a method
 
         $this->args = $args;
@@ -111,16 +110,10 @@ abstract class RESTObject
 
 	public function setupInstance($id) {
 		if (empty($this->id)) {
-			$this->getInstanceDetails($id);
+			return $this->getInstanceDetails($id);
 		} else {
 			return self::ID_ALREADY_SETUP;
 		}
-		if (empty($this->id)) {
-			return self::NO_SUCH_ID;
-		} else {
-			return self::SETUP_OK;
-		}
-		
 	}
 	
     public function process() {
@@ -138,6 +131,9 @@ abstract class RESTObject
 						break;
 					case self::NO_SUCH_ID:
 						return $this->_response("Object ID not found: ".get_class($this)."->id : $id", 404);	
+						break;
+					case self::ACCESS_DENIED:
+						return $this->_response("Not Authorized to access object: ".get_class($this)."->id : $id", 404);	
 						break;
 				}
 			} else {

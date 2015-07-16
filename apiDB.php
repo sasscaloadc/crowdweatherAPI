@@ -28,7 +28,7 @@ class apiDB {
 			}
 		}
 		pg_close($conn);
-		return 0;
+		return -1;
 	}
 
 	static function dirname() {
@@ -42,22 +42,6 @@ class apiDB {
 			die("Database connection failed. ");
 		}
 		return $conn;
-	}
-
-	static function getUserIds() {
-		$conn = apiDB::getConnection();
-		$userids = Array();
-
-		$sql = "SELECT id FROM cw_user";
-		$result = pg_query($conn, $sql);
-		if (count($result) > 0) {
-			// output data of each row
-			while($row = pg_fetch_array($result)) {
-				array_push($userids, $row["id"]);
-			}
-		}
-		pg_close($conn);
-		return $userids;
 	}
 
 	static function getUsers() {
@@ -81,25 +65,25 @@ class apiDB {
 		return $users;
 	}
 
-	static function getUserByEmail($email, &$user) {
+	static function getUserByEmail($email) {
 		$conxn = apiDB::getConnection();
-
-		$sql = "SELECT * FROM cw_user WHERE email = '".$email."' ";
+		
+		$user = new User();
+		$sql = "SELECT id FROM cw_user WHERE email = '".$email."' ";
 		$result = pg_query($conxn, $sql);
 		
 		if (pg_num_rows($result) > 0) {
-		$row = pg_fetch_array($result);
-			$user->email = $row["email"];
-			$user->password = $row["password"];
-			$user->id = $row["id"];
-			$user->locations = apiDB::getUserLocations($user->id); 
-		} 
+			$row = pg_fetch_array($result);
+			$user = apiDB::getUser($row["id"]);
+		}
 		pg_close($conxn);
+		return $user;
 	}
 
-	static function getUser($userid, &$user) {
+	static function getUser($userid) {
 		$conxn = apiDB::getConnection();
 
+		$user = new User();
 		$sql = "SELECT * FROM cw_user WHERE id = ".$userid;
 		$result = pg_query($conxn, $sql);
 		if (pg_num_rows($result) > 0) {
@@ -110,6 +94,7 @@ class apiDB {
 			$user->locations = apiDB::getUserLocations($userid); 
 		} 
 		pg_close($conxn);
+		return $user;
 	}
 
 	static function getUserLocations($userid) {
@@ -266,8 +251,7 @@ class apiDB {
 		if (get_class($user) != "User") {
 				return "Error, received object other than User";
 		}
-		$dbUser = new User();
-		apiDB::getUser($userid, $dbUser);
+		$dbUser = apiDB::getUser($userid);
 		
 		if (empty($dbUser->id)) {
 			return "Error, Invalid User ID for Update";
