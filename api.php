@@ -14,7 +14,7 @@ try {
 
 	$validated = apiDB::validate($user,$pass);
 
-	if (!$validated) {
+	if ((!$validated) || ($validated <= 0)) {
   		header('WWW-Authenticate: Basic realm="SASSCAL Weather"');
   		header('HTTP/1.0 401 Unauthorized');
   		die ("Not authorized");
@@ -36,7 +36,7 @@ try {
 	$reflector = new ReflectionClass($firstclass);
 	$object = $reflector->newInstance();
 
-	$object->setupClass($args);
+	$object->setupClass($args, $validated);
     	echo $object->process();
 	
 } catch (Exception $e) {

@@ -19,14 +19,16 @@ class apiDB {
 	static function validate($username, $password) {
 		$conn = apiDB::getConnection();
 
-		$sql = "SELECT password FROM cw_user WHERE email = '".$username."' ";
+		$sql = "SELECT password, access FROM cw_user WHERE email = '".$username."' ";
 		$result = pg_query($conn, $sql);
 		if (($result) && (!empty($password))) {
 			$row = pg_fetch_array($result);
-			return $password === $row["password"];
+			if ($password === $row["password"]) {
+				return $row["access"];
+			}
 		}
 		pg_close($conn);
-		return false;
+		return 0;
 	}
 
 	static function dirname() {

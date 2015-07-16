@@ -91,7 +91,7 @@ class Location extends RESTObject
 //			return $this->_response("User id not set. Cannot run \"measurements\" without a valid user id on the location.", 404);	
 //		}
 		$msm = new Measurement();
-		$msm->setupClass($this->args, $this->extension);
+		$msm->setupClass($this->args, $this->access, $this->extension);
 		$msm->userid = $this->userid;
 		$msm->locationid = $this->id;
 		return $msm->process();

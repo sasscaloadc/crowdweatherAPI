@@ -75,7 +75,7 @@ class User extends RESTObject
 			return $this->_response("User id not set. Cannot run \"locations\" without a valid user id.", 404);	
 		}
 		$loc = new Location();
-		$loc->setupClass($this->args, $this->extension);
+		$loc->setupClass($this->args, $this->access, $this->extension);
 		$loc->userid = $this->id;
 		return $loc->process();
 	 }

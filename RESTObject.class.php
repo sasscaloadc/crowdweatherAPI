@@ -36,6 +36,7 @@ abstract class RESTObject
 	 
 	 public $id = Null;  // every RESTObject should have an ID field
 	 
+	 protected $access = 0;
 	/**
 	  * This is the function that must return an HTML link to this object in this REST API
 	  */
@@ -63,9 +64,10 @@ abstract class RESTObject
 
 //	abstract function put_array($array);
 
-    public function setupClass($args, $ext = 'html') {  // this used to be a constructor, but changed to a method
+    public function setupClass($args, $access, $ext = 'html') {  // this used to be a constructor, but changed to a method
 
         $this->args = $args;
+		$this->access = $access;
 		
 		//Get extension either from endpoint if array size is 1, or from args if array size > 1. Either way the last item in the list.
 		$this->extension = substr(strrchr(end($this->args), "."),1);
@@ -76,13 +78,6 @@ abstract class RESTObject
 		} else {
 			$this->extension = $ext;
 		}
-		
-		//Pop the function name off the front of the args array
-        //$this->endpoint = array_shift($this->args);
-		
-        //if (array_key_exists(0, $this->args) && !is_numeric($this->args[0])) {
-        //    $this->verb = array_shift($this->args);
-        //}
 		
         $this->method = $_SERVER['REQUEST_METHOD'];
         if ($this->method == 'POST' && array_key_exists('HTTP_X_HTTP_METHOD', $_SERVER)) {
@@ -129,7 +124,6 @@ abstract class RESTObject
 	}
 	
     public function process() {
-///error_log("PROCESS!!");		
 		if (sizeof($this->args) == 0) {
 			return $this->execute();
 		} else {  //there are 1 or more arguments
