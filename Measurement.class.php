@@ -1,6 +1,7 @@
 <?php
 require_once("RESTObject.class.php");
-require_once("apiDB.php");             
+require_once("Rain.class.php");             
+require_once("Mintemp.class.php");             
 
 class Measurement extends RESTObject
 {
