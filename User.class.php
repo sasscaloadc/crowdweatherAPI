@@ -90,7 +90,7 @@ class User extends RESTObject
 				}
 			}
 		}
-		return "ERROR: No user ID or email specified for deletetion";
+		return "ERROR: No user ID or email specified for deletion";
 	}
 	
 	public function getInstanceDetails($id) {

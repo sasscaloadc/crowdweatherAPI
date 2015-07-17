@@ -65,6 +65,21 @@ class apiDB {
 		return $users;
 	}
 
+	static function getUserByLocationId($locationid) {
+		$conxn = apiDB::getConnection();
+		
+		$user = new User();
+		$sql = "SELECT userid FROM userlocation WHERE locationid = ".$locationid;
+		$result = pg_query($conxn, $sql);
+		
+		if ($result && (pg_num_rows($result) > 0)) {
+			$row = pg_fetch_array($result);
+			$user = apiDB::getUser($row["id"]);
+		}
+		pg_close($conxn);
+		return $user;
+	}
+
 	static function getUserByEmail($email) {
 		$conxn = apiDB::getConnection();
 		

@@ -48,6 +48,9 @@ class Location extends RESTObject
 		$location = new Location();
 		if (!empty($array["id"])) {
 			$location = apiDB::getLocation($array["id"]);
+			if (empty($location->id)) {
+				return "Location with id $location->id not found for PUT update";
+			} 
 		} // otherwise we'll just add a new location
 		
 		$location->name = empty($array["name"]) ? $location->name : $array["name"];
@@ -55,6 +58,10 @@ class Location extends RESTObject
 		$location->longitude = empty($array["longitude"]) ? $location->longitude : $array["longitude"];
 		$location->userid = empty($array["userid"]) ? $location->userid : $array["userid"];
 			
+		$user = apiDB::getUser($location->userid);
+		if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+			return "Not authorized to update location for User ".$location->userid;
+		}
 		if (empty($location->id)) {
 			return apiDB::addLocation($location);
 		} else {
@@ -69,12 +76,25 @@ class Location extends RESTObject
 		$location->latitude = $array["latitude"];
 		$location->longitude = $array["longitude"];
 		$location->userid = $array["userid"];
-		
+
+		if (empty($location->userid)) {  // add to logged in user by default
+			$user = apiDB::getUserByEmail($_SERVER['PHP_AUTH_USER']);
+			$location->userid = $user->id;
+		} else {  // check permission ...
+			$user = apiDB::getUser($location->userid);
+			if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+				return "Not authorized to update location for User ".$location->userid;
+			}
+		}
 		return apiDB::addLocation($location);
 	}
 	
 	public function delete_array($array) {
 		if (!empty($array["id"])) {
+			$user = apiDB::getUserByLocationId($array["id"]);
+			if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+				return "Not authorized to delete location for User ".$user->id;
+			}
 			return apiDB::deleteLocation($array["id"]);
 		} 
 		return "ERROR: No location ID specified for deletion";
