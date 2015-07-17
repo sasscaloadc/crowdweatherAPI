@@ -87,9 +87,6 @@ class Location extends RESTObject
 			return self::NO_SUCH_ID;
 		}
 		$user = apiDB::getUser($location->userid);
-error_log("AUTH:".$_SERVER['PHP_AUTH_USER']);
-error_log("EMAIL:".$user->email);
-error_log("ACCESS:".$this->access);
 		if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
 			return self::ACCESS_DENIED;
 		}
@@ -110,9 +107,6 @@ error_log("ACCESS:".$this->access);
 		if (empty($this->id)) {
 			return $this->_response("Location id not set. Cannot run \"measurements\" without a valid location id.", 404);	
 		}
-//		if (empty($this->userid)) {
-//			return $this->_response("User id not set. Cannot run \"measurements\" without a valid user id on the location.", 404);	
-//		}
 		$msm = new Measurement();
 		$msm->setupClass($this->args, $this->access, $this->extension);
 		$msm->userid = $this->userid;

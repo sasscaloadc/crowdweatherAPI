@@ -175,6 +175,7 @@ class apiDB {
 			$location->longitude = $row["longitude"];
 			$location->name = $row["name"];
 			$location->id = $row["id"];
+			$location->userid = $row["userid"];
 			$location->measurements = apiDB::getLocationMeasurements($locationid, $userid);
 		} 
 		pg_close($conxn);

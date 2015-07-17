@@ -27,15 +27,17 @@ try {
 	
 	$firstclass = strtolower(array_shift($args));  //pop first object off the URL
 	
+	$extension = "html";
 	//ignore the extension if there is one.
-	if ((sizeof($args) == 1) && (strrpos($firstclass, ".") !== false)) {
+	if ((sizeof($args) == 0) && (strrpos($firstclass, ".") !== false)) {
+		$extension = substr($firstclass,strrpos($firstclass, ".")+1);
 		$firstclass = substr($firstclass,0,strrpos($firstclass, "."));
 	}
 	$firstclass = ($firstclass[strlen($firstclass) - 1] == 's') ? ucfirst(substr($firstclass, 0, strlen($firstclass) - 1)) : ucfirst($firstclass);
 	$reflector = new ReflectionClass($firstclass);
 	$object = $reflector->newInstance();
 
-	$object->setupClass($args, $validated);
+	$object->setupClass($args, $validated, $extension);
     	echo $object->process();
 	
 } catch (Exception $e) {
