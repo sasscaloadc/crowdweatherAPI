@@ -42,12 +42,12 @@ class Location extends RESTObject
 
 	public function put_array($array) {
 		if ($this->access < 1) {
-                        return "Not authorized to make any updates : guest account";
-                }
+			return "Not authorized to make any updates : guest account";
+        }
 
 		$location = new Location();
 		if (!empty($array["id"])) {
-			apiDB::getLocation($array["id"], $location);
+			$location = apiDB::getLocation($array["id"]);
 		} // otherwise we'll just add a new location
 		
 		$location->name = empty($array["name"]) ? $location->name : $array["name"];
@@ -81,11 +81,26 @@ class Location extends RESTObject
 	}	
 	
 	public function getInstanceDetails($id) {
-		if (empty($this->userid)) {
-			apiDB::getLocation($id, $this);
-		} else {
-			apiDB::getUserLocation($id, $this->userid, $this);
+		$location = empty($this->userid) ? apiDB::getLocation($id) : apiDB::getUserLocation($id, $this->userid, $this);
+
+		if (empty($location->id)) {
+			return self::NO_SUCH_ID;
 		}
+		$user = apiDB::getUser($location->userid);
+error_log("AUTH:".$_SERVER['PHP_AUTH_USER']);
+error_log("EMAIL:".$user->email);
+error_log("ACCESS:".$this->access);
+		if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+			return self::ACCESS_DENIED;
+		}
+		$this->latitude = $location->latitude;
+		$this->longitude = $location->longitude;
+		$this->name = $location->name;
+		$this->userid = $location->userid;
+		$this->id = $location->id;
+		$this->measurements = $location->measurements;
+		// 	Preserving $this->access however, to retain admin rights.
+		return self::SETUP_OK;
 	}
 	
 	/**

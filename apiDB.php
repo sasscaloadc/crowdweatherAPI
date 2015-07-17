@@ -114,7 +114,6 @@ class apiDB {
 				$loc->id = $row["id"];
 				$loc->userid = $userid;
 				$loc->measurements = apiDB::getLocationMeasurements($loc->id, $userid);
-//error_log(count($loc->measurements)." MEASUREMENTS");
 				array_push($locations, $loc);
 			}
 		}
@@ -144,12 +143,14 @@ class apiDB {
 		return $locations;
 	}
 
-	static function getLocation($locationid, &$location) {
+	static function getLocation($locationid) {
 		$conxn = apiDB::getConnection();
 
+		$location = new Location();
 		$sql = "SELECT l.*, ul.userid FROM location l INNER JOIN userlocation ul on l.id = ul.locationid WHERE id = ".$locationid;
 		$result = pg_query($conxn, $sql);
-		if ($result) {
+		
+		if (pg_num_rows($result) > 0) {
 			$row = pg_fetch_array($result);
 			$location->latitude = $row["latitude"];
 			$location->longitude = $row["longitude"];
@@ -157,18 +158,18 @@ class apiDB {
 			$location->id = $row["id"];
 			$location->userid = $row["userid"];
 			$location->measurements = apiDB::getLocationMeasurements($locationid, $row["userid"]);
-		} else {
-			return "ERROR"; // where will this be seen?
-		}
+		} 
 		pg_close($conxn);
+		return $location;
 	}
 	
-	static function getUserLocation($locationid, $userid, &$location) {
+	static function getUserLocation($locationid, $userid) {
 		$conxn = apiDB::getConnection();
 
+		$location = new Location();
 		$sql = "SELECT * FROM location l INNER JOIN userlocation ul on l.id = ul.locationid WHERE id = ".$locationid." AND userid = ".$userid;
 		$result = pg_query($conxn, $sql);
-		if (count($result) > 0) {
+		if (pg_num_rows($result) > 0) {
 			$row = pg_fetch_array($result);
 			$location->latitude = $row["latitude"];
 			$location->longitude = $row["longitude"];
@@ -177,6 +178,7 @@ class apiDB {
 			$location->measurements = apiDB::getLocationMeasurements($locationid, $userid);
 		} 
 		pg_close($conxn);
+		return $location;
 	}
 
 	static function getMeasurement($measurementid, &$measurement) {

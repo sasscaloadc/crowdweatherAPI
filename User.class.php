@@ -104,7 +104,7 @@ class User extends RESTObject
 		$this->id = $user->id;
 		$this->email = $user->email;
 		$this->password = $user->password;
-		$this->locations = $user->locations;
+		$this->locations = $user->locations;  // Does this array need cloning?
 		// 	Preserving $this->access however, to retain admin rights.
 		return self::SETUP_OK;
 	}
