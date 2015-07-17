@@ -4,21 +4,22 @@ require_once("apiDB.php");
 
 class Measurement extends RESTObject
 {
-	public $rain = '';
-	public $mintemp = '';
+	public $reading = '';
 	public $fromdate = '';
 	public $todate = '';
 	public $locationid = '';
 	public $userid = '';
 	public $note = '';
+
+	abstract function columnName();
+	abstract function tableName();
 	
 	public function get_array_instance() {
 		$array = Array();
 		$array["id"] = $this->id;
 		$array["userid"] = $this->userid;
 		$array["locationid"] = $this->locationid;
-		$array["rain"] = $this->rain;
-		$array["mintemp"] = $this->mintemp;
+		$array[columnName()] = $this->reading;
 		$array["fromdate"] = $this->fromdate;
 		$array["todate"] = $this->todate;
 		$array["note"] = $this->note;
@@ -27,22 +28,28 @@ class Measurement extends RESTObject
 	
 	public function get_array_all() {
 		if (empty($this->userid)) {
-			$error = Array();
-			$error["ERROR"] = "cannot display all measurements - please specifiy user ID and location ID";
-			return $error;  //This is a hack
+			$user = apiDB::getUserByEmail( $_SERVER['PHP_AUTH_USER'] );
+			$locations = apiDB::getUserLocations($user->id);
+			if (count($locations) == 1) {
+				return apiDB::getLocationMeasurements($locations[0]->locationid, $user->userid, get_class($this));  
+			} else {
+				$error = Array();
+				$error["ERROR"] = "cannot display all measurements - please specify a location ID";
+				return $error;  //This is a hack
+			}
 		}
-		return apiDB::getLocationMeasurements($this->locationid, $this->userid);  
+		return apiDB::getLocationMeasurements($this->locationid, $this->userid, get_class($this));  
 	}
 
 	public function put_array($array) {
-		$measurement = new Measurement();
-//error_log("PUT!!");		
+		$reflector = new ReflectionClass(get_class($this));
+		$measurement = $reflector->newInstance();
+
 		if (!empty($array["id"])) {
-			apiDB::getMeasurement($array["id"], $measurement);
+			$measurement = apiDB::getMeasurement($array["id"], get_class($this));
 		} // otherwise we'll just add a new measurement
 		
-		$measurement->rain = empty($array["rain"]) ? $measurement->rain : $array["rain"];
-		$measurement->mintemp = empty($array["mintemp"]) ? $measurement->mintemp : $array["mintemp"];
+		$measurement->reading = empty($array["reading"]) ? $measurement->reading : $array[columnName()];
 		$measurement->fromdate = empty($array["fromdate"]) ? $measurement->fromdate : $array["fromdate"];
 		$measurement->todate = empty($array["todate"]) ? $measurement->todate : $array["todate"];
 		$measurement->locationid = empty($array["locationid"]) ? $measurement->locationid : $array["locationid"];
@@ -58,8 +65,7 @@ class Measurement extends RESTObject
 	public function post_array($array) {
 		$measurement = new Measurement();
 		
-		$measurement->rain = $array["rain"];
-		$measurement->mintemp = $array["mintemp"];
+		$measurement->reading = $array[columnName()];
 		$measurement->fromdate = $array["fromdate"];
 		$measurement->todate = $array["todate"];
 		$measurement->locationid = $array["locationid"];
@@ -70,13 +76,30 @@ class Measurement extends RESTObject
 	
 	public function delete_array($array) {
 		if (!empty($array["id"])) {
-			return apiDB::deleteMeasurement($array["id"]);   
+			return apiDB::deleteMeasurement($array["id"], $this->tableName());   
 		} 
 		return "ERROR: No measurement ID specified for deletion";
 	}
 	
 	public function getInstanceDetails($id) {
-		apiDB::getMeasurement($id, $this);   
+		$measurement = apiDB::getMeasurement($id, get_class($this));   
+		
+		if (empty($measurement->id)) {
+			return self::NO_SUCH_ID;
+		}
+		$user = apiDB::getUserByLocationId($measurement->locationid);
+		if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+			return self::ACCESS_DENIED;
+		}
+		$this->id = $measurement->id;
+		$this->userid = $measurement->userid;
+		$this->locationid = $measurement->locationid;
+		$this->reading = $measurement->reading;
+		$this->fromdate = $measurement->fromdate;
+		$this->todate = $measurement->todate;
+		$this->note = $measurement->note;
+		// 	Preserving $this->access however, to retain admin rights.
+		return self::SETUP_OK;
 	}
 	
 	function apiLink() {

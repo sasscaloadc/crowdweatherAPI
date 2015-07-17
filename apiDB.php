@@ -197,25 +197,27 @@ class apiDB {
 		return $location;
 	}
 
-	static function getMeasurement($measurementid, &$measurement) {
+	static function getMeasurement($measurementid, classname) {
 		$conxn = apiDB::getConnection();
+		$reflector = new ReflectionClass(classname);
+		$measurement = $reflector->newInstance();
 
-		$sql = "SELECT * FROM measurement WHERE id = ".$measurementid;
+		$sql = "SELECT * FROM $measurement.tableName() WHERE id = ".$measurementid;
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$row = pg_fetch_array($result);
 			$measurement->id = $row["id"];
-			$measurement->rain = $row["rain"];
-			$measurement->mintemp = $row["mintemp"];
+			$measurement->reading = $row[$measurement.columnName()];
 			$measurement->fromdate = $row["fromdate"];
 			$measurement->todate = $row["todate"];
 			$measurement->locationid = $row["locationid"];
 			$measurement->note = $row["note"];
 		} 
+		return $measurement;
 		pg_close($conxn);
 	}
 	
-	static function getLocationMeasurements($locationid, $userid) {
+	static function getLocationMeasurements($locationid, $userid, $classname) {
 		if (empty($locationid)) {
 			return "ERROR: GetLocationMeasurements called without valid location id ";
 		}
@@ -224,14 +226,15 @@ class apiDB {
 		}
 		$conn = apiDB::getConnection();
 		$measurements = Array();
-		$sql = "SELECT m.* FROM measurement m WHERE m.locationid = ".$locationid;
+		$reflector = new ReflectionClass($classname);
+		$msm = $reflector->newInstance();
+		$sql = "SELECT m.* FROM $msm.tableName() m WHERE m.locationid = ".$locationid;
 		$result = pg_query($conn, $sql);
 		if ($result) {
 			while($row = pg_fetch_array($result)) {
-				$msm = new Measurement();  
+				$msm = $reflector->newInstance();
 				$msm->id = $row["id"];
-				$msm->rain = $row["rain"];
-				$msm->mintemp = $row["mintemp"];
+				$msm->reading = $row[$msm->columnName()];
 				$msm->fromdate = $row["fromdate"];
 				$msm->todate = $row["todate"];
 				$msm->locationid = $row["locationid"];
@@ -398,11 +401,11 @@ class apiDB {
 	}
 	
 	static function addMeasurement(&$measurement) {
-		if (get_class($measurement) != "Measurement") {
-				return "Error, received object other than Measurement";
+		if (!is_subclass_of ($measurement, "Measurement")) {
+				return "Error, received object other than Measurement subclass";
 		}
-		if (empty($measurement->rain) && empty($measurement->mintemp)) {
-			return "Error, either rainfall or minimum temperature must be specified for measurement";
+		if (empty($measurement->reading)) {
+			return "Error, reading must be specified for measurement";
 		}
 		if (empty($measurement->locationid)) {
 			return "Error, no location id specified for measurement";
@@ -414,31 +417,26 @@ class apiDB {
 			return "Error, no 'to' date specified for measurement";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "INSERT INTO measurement (fromdate, todate, locationid";
-		$sql .= empty($measurement->rain)? "" : ", rain";
-		$sql .= empty($measurement->mintemp)? "" : ", mintemp";
+		$sql = "INSERT INTO ".$measurement.tableName()." (fromdate, todate, locationid, ".$measurement.columnName();
 		$sql .= empty($measurement->note)? "" : ", note";
-		$sql .= ") VALUES ('".$measurement->fromdate."','".$measurement->todate."', ".$measurement->locationid;
-		$sql .= empty($measurement->rain)? "" : ", ".$measurement->rain;
-		$sql .= empty($measurement->mintemp)? "" : ", ".$measurement->mintemp;
+		$sql .= ") VALUES ('".$measurement->fromdate."','".$measurement->todate."', ".$measurement->locationid.", ".$measurement->reading;
 		$sql .= empty($measurement->note)? "" : ", '".$measurement->note."'";
 		$sql .= "); ";
 		
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
-			return "Measurement Added";
+			return "Measurement Added: \"$measurement.columnName()\"";
 		} else { 
-			return "Error with measurement insert query : ".pg_last_error($conxn);
+			return "Error with $measurement.columnName() measurement insert query : ".pg_last_error($conxn);
 		}
 	}
 	
 	static function updateMeasurement($measurementid, $measurement) {
-		if (get_class($measurement) != "Measurement") {
-				return "Error, received object other than Measurement";
+		if (!is_subclass_of ($measurement, "Measurement")) {
+				return "Error, received object other than Measurement subclass";
 		}
-		$dbMeasurement = new Measurement();
-		apiDB::getMeasurement($measurementid, $dbMeasurement);
+		$dbMeasurement = apiDB::getMeasurement($measurementid);
 		
 		if (empty($dbMeasurement->id)) {
 			return "Error, Invalid Location ID for Update";
@@ -446,9 +444,7 @@ class apiDB {
 		
 		$conxn = apiDB::getConnection();
 		$updatestring = "set ";
-		$updatestring .= "rain = ".(empty($measurement->rain) ? "rain" : $measurement->rain);
-		$updatestring .= ", ";
-		$updatestring .= "mintemp = ".(empty($measurement->mintemp) ? "mintemp" : $measurement->mintemp);
+		$updatestring .= $measurement.columnName()." = ".(empty($measurement->rain) ? "rain" : $measurement->reading);
 		$updatestring .= ", ";
 		$updatestring .= "fromdate = ".(empty($measurement->fromdate) ? "fromdate" : "'".$measurement->fromdate."'");
 		$updatestring .= ", ";
@@ -461,25 +457,25 @@ class apiDB {
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
-			return $rows." Measurement(s) updated";
+			return $rows." $measurement.columnName() measurement(s) updated";
 		} else { 
-			return "Error with Measurement update query : ".pg_last_error($conxn);
+			return "Error with $measurement.columnName() measurement update query : ".pg_last_error($conxn);
 		}
 	}
 
-	static function deleteMeasurement($measurementid) {
+	static function deleteMeasurement($measurementid, $table) {
 		if (empty($measurementid)) {
 			return "Error, no measurement id specified for deleting measurement";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "DELETE FROM measurement WHERE id = ".$measurementid." RETURNING id; ";
+		$sql = "DELETE FROM $table WHERE id = ".$measurementid." RETURNING id; ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_fetch_row($result); 
 			$deletedid = $rows[0];
-			return empty($deletedid) ? "Measurement not found: ".$measurementid : "Measurement Deleted: ".$measurementid;
+			return empty($deletedid) ? "Measurement not found in $table: ".$measurementid : "Measurement deleted from $table: ".$measurementid;
 		} else {
-			return "Error with delete query for Measurement: ".pg_last_error($conxn);
+			return "Error with delete query for Measurement in $table: ".pg_last_error($conxn);
 		}
 	}
 

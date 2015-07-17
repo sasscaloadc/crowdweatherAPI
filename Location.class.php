@@ -124,19 +124,32 @@ class Location extends RESTObject
 	}
 	
 	/**
-     * Measurements Endpoint
+     * rainfall Endpoint
      */
-     protected function measurements() {
+     protected function rainfall() {
 		if (empty($this->id)) {
-			return $this->_response("Location id not set. Cannot run \"measurements\" without a valid location id.", 404);	
+			return $this->_response("Location id not set. Cannot run \"rainfall\" without a valid location id.", 404);	
 		}
-		$msm = new Measurement();
-		$msm->setupClass($this->args, $this->access, $this->extension);
-		$msm->userid = $this->userid;
-		$msm->locationid = $this->id;
-		return $msm->process();
+		$rain = new Rain();
+		$rain->setupClass($this->args, $this->access, $this->extension);
+		$rain->userid = $this->userid;
+		$rain->locationid = $this->id;
+		return $rain->process();
 	 }
 
+	/**
+     * mintemp Endpoint
+     */
+     protected function mintemp() {
+		if (empty($this->id)) {
+			return $this->_response("Location id not set. Cannot run \"mintemp\" without a valid location id.", 404);	
+		}
+		$mintemp = new MinTemp();
+		$mintemp->setupClass($this->args, $this->access, $this->extension);
+		$mintemp->userid = $this->userid;
+		$mintemp->locationid = $this->id;
+		return $mintemp->process();
+	 }
 }
 
 ?>
