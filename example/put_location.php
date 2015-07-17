@@ -1,3 +1,4 @@
+<h2> PUT - Location </h2>
 <?php
 	
 	function arrayToXML(Array $array, SimpleXMLElement &$xml) {
@@ -22,11 +23,11 @@
 	}   
 	
 $data = Array();
-$data["id"] = 11;
-$data["latitude"] = -11.123;
-$data["longitude"] = 14.2542;
+$data["id"] = 24;
+$data["latitude"] = -44.313;
+$data["longitude"] = 35.8123;
 $data["userid"] = 4;
-$data["name"] = "platteklip";
+$data["name"] = "secondbase";
 
 
 //$data = Array();
@@ -42,15 +43,28 @@ $fields = json_encode($data);
 
 $ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, "http://10.0.0.10/api/locations");
+curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/locations");
+//curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
+//curl_setopt($ch, CURLOPT_USERPWD, "root@newestplace.org:xcv123d");
+curl_setopt($ch, CURLOPT_USERPWD, "martin@weather.co.za:qwe123");
+//curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
 
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT'); 
 curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/json", "Content-Length: " . strlen($fields)));
 //curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/xml", "Content-Length: " . strlen($fields)));
 curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
 
-curl_exec($ch);
-
+if ( curl_exec($ch)) {;
+	echo "<br>Done: Success";
+} else {
+	echo "<br>Done: Failure<br>";
+    echo "cURL error : ".curl_error($ch);
+}
 	
 ?>
+<br/>
+End
+<br/>
 

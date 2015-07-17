@@ -74,7 +74,7 @@ class apiDB {
 		
 		if ($result && (pg_num_rows($result) > 0)) {
 			$row = pg_fetch_array($result);
-			$user = apiDB::getUser($row["id"]);
+			$user = apiDB::getUser($row["userid"]);
 		}
 		pg_close($conxn);
 		return $user;
@@ -356,8 +356,7 @@ class apiDB {
 		if (get_class($location) != "Location") {
 				return "Error, received object other than Location for update";
 		}
-		$dbLocation = new Location();
-		apiDB::getLocation($locationid, $dbLocation);
+		$dbLocation = apiDB::getLocation($locationid);
 		
 		if (empty($dbLocation->id)) {
 			return "Error, Invalid Location ID for Update";
@@ -387,7 +386,7 @@ class apiDB {
 			return "Error, no location id specified for deleting location";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "DELETE FROM userlocation WHERE locationid = ".$locationid." ; DELETE FROM location WHERE id = ".$locationid." RETURNING id; ";
+		$sql = "DELETE FROM userlocation WHERE locationid = ".$locationid." ; DELETE FROM measurement WHERE locationid = ".$locationid." ;DELETE FROM location WHERE id = ".$locationid." RETURNING id; ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_fetch_row($result); 

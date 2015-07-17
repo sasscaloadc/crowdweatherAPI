@@ -86,6 +86,9 @@ class Location extends RESTObject
 				return "Not authorized to update location for User ".$location->userid;
 			}
 		}
+		if ($this->access < 1) {
+			return "Not authorized to add any locations: guest or disabled account";
+		}
 		return apiDB::addLocation($location);
 	}
 	
