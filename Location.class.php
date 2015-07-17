@@ -29,15 +29,23 @@ class Location extends RESTObject
 
 	public function get_array_all() {
 		if (empty($this->userid)) {
-			return apiDB::getLocations();
+			if ($this->access > 1) {
+				return apiDB::getLocations();
+			} else {
+				$user = apiDB::getUserByEmail( $_SERVER['PHP_AUTH_USER'] );
+				return apiDB::getUserLocations($user->id);
+			}
 		} else {
 			return apiDB::getUserLocations($this->userid);
 		}
 	}
 
 	public function put_array($array) {
+		if ($this->access < 1) {
+                        return "Not authorized to make any updates : guest account";
+                }
+
 		$location = new Location();
-//error_log("PUT!!");		
 		if (!empty($array["id"])) {
 			apiDB::getLocation($array["id"], $location);
 		} // otherwise we'll just add a new location

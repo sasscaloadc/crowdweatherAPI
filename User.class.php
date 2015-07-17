@@ -75,10 +75,19 @@ class User extends RESTObject
 	
 	public function delete_array($array) {
 		if (!empty($array["id"])) {
-			return apiDB::deleteUser($array["id"]);
+			$user = apiDB::getUser($array["id"]);
+			if ($this->access <= 1) {
+				return "Not authorized to delete User ".$user->id;
+			} else {
+				return apiDB::deleteUser($array["id"]);
+			}
 		} else {
 			if (!empty($array["email"])) {
-				return apiDB::deleteUserByEmail($array["email"]);
+				if ($this->access <= 1) {
+					return "Not authorized to delete User ".$array["email"];
+				} else {
+					return apiDB::deleteUserByEmail($array["email"]);
+				}
 			}
 		}
 		return "ERROR: No user ID or email specified for deletetion";

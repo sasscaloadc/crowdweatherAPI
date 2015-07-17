@@ -25,7 +25,7 @@
 	
 $data = Array();
 //$data["id"] = "40";
-$data["email"] = "neweruser@gmail.com";
+$data["email"] = "newuser@gmail.com";
 $data["password"] = "newspace";
 
 $fields = json_encode($data);
