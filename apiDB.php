@@ -128,7 +128,8 @@ class apiDB {
 				$loc->name = $row["name"];
 				$loc->id = $row["id"];
 				$loc->userid = $userid;
-				$loc->measurements = apiDB::getLocationMeasurements($loc->id, $userid);
+				$loc->rain = apiDB::getLocationMeasurements($loc->id, $userid, "Rain");
+				$loc->mintemp = apiDB::getLocationMeasurements($loc->id, $userid, "Mintemp");
 				array_push($locations, $loc);
 			}
 		}
@@ -150,7 +151,8 @@ class apiDB {
 				$loc->name = $row["name"];
 				$loc->id = $row["id"];
 				$loc->userid = $row["userid"];
-				$loc->measurements = apiDB::getLocationMeasurements($loc->id, $loc->userid);
+				$loc->rain = apiDB::getLocationMeasurements($loc->id, $loc->userid, "Rain");
+				$loc->mintemp = apiDB::getLocationMeasurements($loc->id, $loc->userid, "Mintemp");
 				array_push($locations, $loc);
 			}
 		}
@@ -172,7 +174,8 @@ class apiDB {
 			$location->name = $row["name"];
 			$location->id = $row["id"];
 			$location->userid = $row["userid"];
-			$location->measurements = apiDB::getLocationMeasurements($locationid, $row["userid"]);
+			$location->rain = apiDB::getLocationMeasurements($locationid, $row["userid"], "Rain");
+			$location->mintemp = apiDB::getLocationMeasurements($locationid, $row["userid"], "Mintemp");
 		} 
 		pg_close($conxn);
 		return $location;
@@ -191,23 +194,24 @@ class apiDB {
 			$location->name = $row["name"];
 			$location->id = $row["id"];
 			$location->userid = $row["userid"];
-			$location->measurements = apiDB::getLocationMeasurements($locationid, $userid);
+			$location->rain = apiDB::getLocationMeasurements($locationid, $userid, "Rain");
+			$location->mintemp = apiDB::getLocationMeasurements($locationid, $userid, "Mintemp");
 		} 
 		pg_close($conxn);
 		return $location;
 	}
 
-	static function getMeasurement($measurementid, classname) {
+	static function getMeasurement($measurementid, $classname) {
 		$conxn = apiDB::getConnection();
-		$reflector = new ReflectionClass(classname);
+		$reflector = new ReflectionClass($classname);
 		$measurement = $reflector->newInstance();
 
-		$sql = "SELECT * FROM $measurement.tableName() WHERE id = ".$measurementid;
+		$sql = "SELECT * FROM ".$measurement->tableName()." WHERE id = ".$measurementid;
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$row = pg_fetch_array($result);
 			$measurement->id = $row["id"];
-			$measurement->reading = $row[$measurement.columnName()];
+			$measurement->reading = $row[$measurement->columnName()];
 			$measurement->fromdate = $row["fromdate"];
 			$measurement->todate = $row["todate"];
 			$measurement->locationid = $row["locationid"];
@@ -228,7 +232,7 @@ class apiDB {
 		$measurements = Array();
 		$reflector = new ReflectionClass($classname);
 		$msm = $reflector->newInstance();
-		$sql = "SELECT m.* FROM $msm.tableName() m WHERE m.locationid = ".$locationid;
+		$sql = "SELECT m.* FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid;
 		$result = pg_query($conn, $sql);
 		if ($result) {
 			while($row = pg_fetch_array($result)) {
@@ -400,7 +404,7 @@ class apiDB {
 		}
 	}
 	
-	static function addMeasurement(&$measurement) {
+	static function addMeasurement($measurement) {
 		if (!is_subclass_of ($measurement, "Measurement")) {
 				return "Error, received object other than Measurement subclass";
 		}
@@ -417,7 +421,7 @@ class apiDB {
 			return "Error, no 'to' date specified for measurement";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "INSERT INTO ".$measurement.tableName()." (fromdate, todate, locationid, ".$measurement.columnName();
+		$sql = "INSERT INTO ".$measurement->tableName()." (fromdate, todate, locationid, ".$measurement->columnName();
 		$sql .= empty($measurement->note)? "" : ", note";
 		$sql .= ") VALUES ('".$measurement->fromdate."','".$measurement->todate."', ".$measurement->locationid.", ".$measurement->reading;
 		$sql .= empty($measurement->note)? "" : ", '".$measurement->note."'";
@@ -426,9 +430,9 @@ class apiDB {
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
-			return "Measurement Added: \"$measurement.columnName()\"";
+			return "Measurement Added: \"".$measurement->columnName()."\"";
 		} else { 
-			return "Error with $measurement.columnName() measurement insert query : ".pg_last_error($conxn);
+			return "Error with $measurement->columnName() measurement insert query : ".pg_last_error($conxn);
 		}
 	}
 	
@@ -436,30 +440,31 @@ class apiDB {
 		if (!is_subclass_of ($measurement, "Measurement")) {
 				return "Error, received object other than Measurement subclass";
 		}
-		$dbMeasurement = apiDB::getMeasurement($measurementid);
+		$dbMeasurement = apiDB::getMeasurement($measurementid, get_class($measurement));
 		
 		if (empty($dbMeasurement->id)) {
-			return "Error, Invalid Location ID for Update";
+			return "Error, Invalid Measurement ID for Update";
 		}
 		
 		$conxn = apiDB::getConnection();
-		$updatestring = "set ";
-		$updatestring .= $measurement.columnName()." = ".(empty($measurement->rain) ? "rain" : $measurement->reading);
+		$updatestring = " set ";
+		$updatestring .= $measurement->columnName()." = ".(empty($measurement->reading) ? $measurement->columnName() : $measurement->reading);
 		$updatestring .= ", ";
 		$updatestring .= "fromdate = ".(empty($measurement->fromdate) ? "fromdate" : "'".$measurement->fromdate."'");
 		$updatestring .= ", ";
 		$updatestring .= "todate = ".(empty($measurement->todate) ? "todate" : "'".$measurement->todate."'");
 		$updatestring .= ", ";
+		$updatestring .= "locationid = ".(empty($measurement->locationid) ? "locationid" : $measurement->locationid);
+		$updatestring .= ", ";
 		$updatestring .= "note = ".(empty($measurement->note) ? "note" : "'".$measurement->note."'");
 
-		$sql = "UPDATE measurement ".$updatestring." WHERE id = ".$measurementid;
-		
+		$sql = "UPDATE ".$measurement->tableName()." ".$updatestring." WHERE id = ".$measurementid;
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
-			return $rows." $measurement.columnName() measurement(s) updated";
+			return $rows." ".$measurement->columnName()." measurement(s) updated";
 		} else { 
-			return "Error with $measurement.columnName() measurement update query : ".pg_last_error($conxn);
+			return "Error with ".$measurement->columnName()." measurement update query : ".pg_last_error($conxn);
 		}
 	}
 

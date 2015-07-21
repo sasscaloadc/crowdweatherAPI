@@ -25,7 +25,8 @@
 	
 $data = Array();
 
-$data["locationid"] = 5;
+$data["locationid"] = 12;
+//$data["locationid"] = 31;
 $data["rain"] = 23;
 $data["mintemp"] = 19;
 $data["fromdate"] = '2015-05-08';

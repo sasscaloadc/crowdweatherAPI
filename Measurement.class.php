@@ -3,7 +3,7 @@ require_once("RESTObject.class.php");
 require_once("Rain.class.php");             
 require_once("Mintemp.class.php");             
 
-class Measurement extends RESTObject
+abstract class Measurement extends RESTObject
 {
 	public $reading = '';
 	public $fromdate = '';
@@ -48,9 +48,20 @@ class Measurement extends RESTObject
 
 		if (!empty($array["id"])) {
 			$measurement = apiDB::getMeasurement($array["id"], get_class($this));
-		} // otherwise we'll just add a new measurement
+		} else {
+			if (empty($array["locationid"])) {
+				//Throwing this error before calling getUserByLocationId() below.
+				return "Error: Location ID has to be specified if measurement ID is not set";	
+			}
+		}
+
+		$locid = empty($array["locationid"]) ? $measurement->locationid : $array["locationid"];
+                $user = apiDB::getUserByLocationId($locid);
+                if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+                        return "Not authorized to add measurements to location ".$locid;
+                }
 		
-		$measurement->reading = empty($array["reading"]) ? $measurement->reading : $array[columnName()];
+		$measurement->reading = empty($array[$measurement->columnName()]) ? $measurement->reading : $array[$measurement->columnName()];
 		$measurement->fromdate = empty($array["fromdate"]) ? $measurement->fromdate : $array["fromdate"];
 		$measurement->todate = empty($array["todate"]) ? $measurement->todate : $array["todate"];
 		$measurement->locationid = empty($array["locationid"]) ? $measurement->locationid : $array["locationid"];
@@ -64,9 +75,15 @@ class Measurement extends RESTObject
 	}
 	
 	public function post_array($array) {
-		$measurement = new Measurement();
-		
-		$measurement->reading = $array[columnName()];
+                $reflector = new ReflectionClass(get_class($this)); 
+                $measurement = $reflector->newInstance();
+
+                $user = apiDB::getUserByLocationId($array["locationid"]);
+                if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+                        return "Not authorized to add measurements to location ".$array["locationid"];
+                }
+
+		$measurement->reading = $array[$this->columnName()];
 		$measurement->fromdate = $array["fromdate"];
 		$measurement->todate = $array["todate"];
 		$measurement->locationid = $array["locationid"];

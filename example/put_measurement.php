@@ -1,3 +1,4 @@
+<h2> PUT - Measurements </h2>
 <?php
 	
 	function arrayToXML(Array $array, SimpleXMLElement &$xml) {
@@ -22,13 +23,13 @@
 	}   
 	
 $data = Array();
-$data["id"] = 11;
-$data["locationid"] = 4;
-$data["rain"] = 2;
+//$data["id"] = 10;
+$data["locationid"] = 16;
+$data["rain"] = 15;
 $data["mintemp"] = 7;
-$data["fromdate"] = '2015-05-06';
-$data["todate"] = '2015-05-07';
-//$data["note"] = "It was very dry rain";
+$data["fromdate"] = '2015-05-18 10:34';
+$data["todate"] = '2015-05-19';
+$data["note"] = "New dry rain";
 
 
 //$data = Array();
@@ -44,15 +45,28 @@ $fields = json_encode($data);
 
 $ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, "http://10.0.0.10/api/measurements");
+curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/mintemp");
+curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
+//curl_setopt($ch, CURLOPT_USERPWD, "root@newestplace.org:xcv123d");
+//curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
 
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT'); 
 curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/json", "Content-Length: " . strlen($fields)));
 //curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/xml", "Content-Length: " . strlen($fields)));
 curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
 
-curl_exec($ch);
+if ( curl_exec($ch)) {;
+        echo "<br>Done: Success";
+} else {
+        echo "<br>Done: Failure<br>";
+    echo "cURL error : ".curl_error($ch);
+}
 
-	
 ?>
+<br/>
+End
+<br/>
 

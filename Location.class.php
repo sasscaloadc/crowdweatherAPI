@@ -8,7 +8,8 @@ class Location extends RESTObject
 	public $longitude = '';
 	public $name = '';
 	public $userid = '';
-	public $measurements = Array();
+	public $rain = Array();
+	public $mintemp = Array();
 
 	function apiLink() {
 		$useridString = empty($this->userid) ? "" : "/users/".$this->userid;
@@ -23,7 +24,8 @@ class Location extends RESTObject
 		$array["name"] = $this->name;
 		$array["userid"] = $this->userid;
 		$array["id"] = $this->id;
-		$array["measurements"] = $this->measurements;
+		$array["rain"] = $this->rain;
+		$array["mintemp"] = $this->mintemp;
 		return $array;
 	}
 
@@ -118,7 +120,8 @@ class Location extends RESTObject
 		$this->name = $location->name;
 		$this->userid = $location->userid;
 		$this->id = $location->id;
-		$this->measurements = $location->measurements;
+		$this->rain = $location->rain;
+		$this->mintemp = $location->mintemp;
 		// 	Preserving $this->access however, to retain admin rights.
 		return self::SETUP_OK;
 	}
