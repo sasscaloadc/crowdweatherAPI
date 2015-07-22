@@ -432,7 +432,7 @@ class apiDB {
 			$rows = pg_affected_rows($result); 
 			return "Measurement Added: \"".$measurement->columnName()."\"";
 		} else { 
-			return "Error with $measurement->columnName() measurement insert query : ".pg_last_error($conxn);
+			return "Error with ".$measurement->columnName()." measurement insert query : ".pg_last_error($conxn);
 		}
 	}
 	

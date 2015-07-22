@@ -129,7 +129,7 @@ class Location extends RESTObject
 	/**
      * rainfall Endpoint
      */
-     protected function rainfall() {
+     protected function rain() {
 		if (empty($this->id)) {
 			return $this->_response("Location id not set. Cannot run \"rainfall\" without a valid location id.", 404);	
 		}

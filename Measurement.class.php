@@ -18,9 +18,8 @@ abstract class Measurement extends RESTObject
 	public function get_array_instance() {
 		$array = Array();
 		$array["id"] = $this->id;
-		$array["userid"] = $this->userid;
 		$array["locationid"] = $this->locationid;
-		$array[columnName()] = $this->reading;
+		$array[$this->columnName()] = $this->reading;
 		$array["fromdate"] = $this->fromdate;
 		$array["todate"] = $this->todate;
 		$array["note"] = $this->note;
@@ -94,6 +93,16 @@ abstract class Measurement extends RESTObject
 	
 	public function delete_array($array) {
 		if (!empty($array["id"])) {
+			$measurement = apiDB::getMeasurement($array["id"], get_class($this));
+
+			if (empty($measurement->id)) {
+				return "Error: \"".$measurement->columnName()."\" measurement with id ".$array["id"]." not found";
+			}
+			$user = apiDB::getUserByLocationId($measurement->locationid);
+	                if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
+        	                return "Error: Not authorized to delete ".$measurement->columnName()." measurement from location ".$measurement->locationid;
+                	}
+
 			return apiDB::deleteMeasurement($array["id"], $this->tableName());   
 		} 
 		return "ERROR: No measurement ID specified for deletion";
@@ -123,7 +132,7 @@ abstract class Measurement extends RESTObject
 	function apiLink() {
 		$useridString = empty($this->userid) ? "" : "/users/".$this->userid;
 		$locationidString = empty($this->locationid) ? "" : "/locations/".$this->locationid;
-		$linkString = "https://".apiDB::$servername."/".apiDB::dirname().$useridString.$locationidString."/measurements/" . $this->id ;
+		$linkString = "https://".apiDB::$servername."/".apiDB::dirname().$useridString.$locationidString."/".$this->columnName()."/" . $this->id ;
 		return "<a href=\"".$linkString."\">".$this->fromdate."->".$this->todate."</a>";
 	}
 	

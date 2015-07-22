@@ -1,3 +1,4 @@
+<h2>DELETE - Measurement </h2>
 <?php
 	
 	function arrayToXML(Array $array, SimpleXMLElement &$xml) {
@@ -23,7 +24,7 @@
 	
 
 $data = Array();
-$data["id"] = "13";
+$data["id"] = "20";
 
 
 $fields = json_encode($data);
@@ -34,15 +35,30 @@ $fields = json_encode($data);
 
 $ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, "http://10.0.0.10/api/measurements");
+curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/mintemp");
+curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/rain");
+//curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
+curl_setopt($ch, CURLOPT_USERPWD, "root@newestplace.org:xcv123d");
+//curl_setopt($ch, CURLOPT_USERPWD, "martin@weather.co.za:qwe123");
+//curl_setopt($ch, CURLOPT_USERPWD, "sasscal@enron.com:didntspillatall");
+//curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
 
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE'); 
 curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/json", "Content-Length: " . strlen($fields)));
 //curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept:application/xml", "Content-Length: " . strlen($fields)));
 curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
 
-curl_exec($ch);
-
+if ( curl_exec($ch)) {;
+	echo "<br>Done: Success";
+} else {
+	echo "<br>Done: Failure<br>";
+    echo "cURL error : ".curl_error($ch);
+}
 	
 ?>
+<br/>
+End
+<br/>
 
