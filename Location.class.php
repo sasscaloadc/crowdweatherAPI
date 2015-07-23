@@ -31,12 +31,12 @@ class Location extends RESTObject
 
 	public function get_array_all() {
 		if (empty($this->userid)) {
-			if ($this->access > 1) {
-				return apiDB::getLocations();
-			} else {
+			//if ($this->access > 1) {
+			//	return apiDB::getLocations();
+			//} else {
 				$user = apiDB::getUserByEmail( $_SERVER['PHP_AUTH_USER'] );
 				return apiDB::getUserLocations($user->id);
-			}
+			//}
 		} else {
 			return apiDB::getUserLocations($this->userid);
 		}

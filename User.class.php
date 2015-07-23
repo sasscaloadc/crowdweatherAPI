@@ -94,7 +94,7 @@ class User extends RESTObject
 	}
 	
 	public function getInstanceDetails($id) {
-		$user = apiDB::getUser($id);
+		$user = apiDB::getUser($id, 2);
 		if (empty($user->id)) {
 			return self::NO_SUCH_ID;
 		}

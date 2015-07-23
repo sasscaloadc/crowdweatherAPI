@@ -29,7 +29,7 @@ abstract class Measurement extends RESTObject
 	public function get_array_all() {
 		if (empty($this->userid)) {
 			$user = apiDB::getUserByEmail( $_SERVER['PHP_AUTH_USER'] );
-			$locations = apiDB::getUserLocations($user->id);
+			$locations = apiDB::getUserLocations($user->id, $this->columnName());
 			if (count($locations) == 1) {
 				return apiDB::getLocationMeasurements($locations[0]->locationid, $user->userid, get_class($this));  
 			} else {

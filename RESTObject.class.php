@@ -295,7 +295,7 @@ abstract class RESTObject
 			// Object
 			if (is_object($value)) {
 				$key = get_class($value)."_".$key;  
-				$value = get_object_vars($value);
+				$value = is_a($value, "RESTObject") ? $value->get_array_instance() : get_object_vars($value);
 			}
 			
 			if (is_array($value)) {
@@ -320,7 +320,8 @@ abstract class RESTObject
 			// Object
 			if (is_object($value)) {
 				$xmlChild = $xml->addChild(get_class($value));
-				$this->arrayToXML(get_object_vars($value), $xmlChild);
+				$vars_array = is_a($value, "RESTObject") ? $value->get_array_instance() : get_object_vars($value);
+				$this->arrayToXML($vars_array, $xmlChild);
 				continue;
 			}
 			
@@ -334,9 +335,13 @@ abstract class RESTObject
 		$out = "<ul>";
 		foreach($displayArray as $key => $value) {	
 			if (is_array($value)) {  
-				$out .= "<li>$key: </li><ul>";
-				$out .= $this->toHTML($value);
-				$out .= "</ul>";
+				if (($key == "rain") || ($key == "mintemp")) {
+					$out .= "<li><a href=\"https://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']."/".$key."\">".$key."</a></li>";
+				} else {
+					$out .= "<li>$key: </li><ul>";
+					$out .= $this->toHTML($value);
+					$out .= "</ul>";
+				}
 			} else {
 					$out .= "<li>";
 					if (is_a($value, "RESTObject")) {

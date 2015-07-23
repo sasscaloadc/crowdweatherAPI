@@ -25,12 +25,12 @@
 	
 $data = Array();
 
-$data["locationid"] = 16;
+$data["locationid"] = 1;
 //$data["locationid"] = 31;
-$data["rain"] = 13;
-//$data["mintemp"] = 19;
-$data["fromdate"] = '2015-05-01';
-$data["todate"] = '2015-05-02 10:33:59 ';
+//$data["rain"] = 13;
+$data["mintemp"] = 19;
+$data["fromdate"] = '2015-04-30';
+$data["todate"] = '2015-05-01 10:59 ';
 $data["note"] = "test trigger for date range";
 
 $fields = json_encode($data);
@@ -41,10 +41,10 @@ $fields = json_encode($data);
 
 $ch = curl_init();
 
-curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/rain");
-//curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/mintemp");
-//curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
-curl_setopt($ch, CURLOPT_USERPWD, "root@newestplace.org:xcv123d");
+//curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/rain");
+curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/mintemp");
+curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
+//curl_setopt($ch, CURLOPT_USERPWD, "root@newestplace.org:xcv123d");
 //curl_setopt($ch, CURLOPT_USERPWD, "martin@weather.co.za:qwe123");
 //curl_setopt($ch, CURLOPT_USERPWD, "sasscal@enron.com:didntspillatall");
 //curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");

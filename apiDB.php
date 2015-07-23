@@ -44,7 +44,7 @@ class apiDB {
 		return $conn;
 	}
 
-	static function getUsers() {
+	static function getUsers($level = 1) {
 		$conn = apiDB::getConnection();
 		$users = Array();
 
@@ -53,11 +53,15 @@ class apiDB {
 		if (count($result) > 0) {
 			// output data of each row
 			while($row = pg_fetch_array($result)) {
-				$user = new User();
-				$user->email = $row["email"];
-				$user->password = $row["password"];
-				$user->id = $row["id"];
-				$user->locations = apiDB::getLocations($user->id); 
+				if ($level > 0) {
+					$user = new User();
+					$user->email = $row["email"];
+					$user->password = $row["password"];
+					$user->id = $row["id"];
+					$user->locations = apiDB::getUserLocations($user->id, $level - 1); 
+				} else {
+					$user = $row["id"];
+				}
 				array_push($users, $user);
 			}
 		}
@@ -95,7 +99,7 @@ class apiDB {
 		return $user;
 	}
 
-	static function getUser($userid) {
+	static function getUser($userid, $level = 1) {
 		$conxn = apiDB::getConnection();
 
 		$user = new User();
@@ -103,33 +107,51 @@ class apiDB {
 		$result = pg_query($conxn, $sql);
 		if (pg_num_rows($result) > 0) {
 			$row = pg_fetch_array($result);
-			$user->email = $row["email"];
-			$user->password = $row["password"];
-			$user->id = $row["id"];
-			$user->locations = apiDB::getUserLocations($userid); 
+			if ($level > 0) {
+				$user->email = $row["email"];
+				$user->password = $row["password"];
+				$user->id = $row["id"];
+				$user->locations = apiDB::getUserLocations($userid, $level - 1); 
+			} else {
+				$user = $row["id"];
+			}
 		} 
 		pg_close($conxn);
 		return $user;
 	}
 
-	static function getUserLocations($userid) {
+	static function getUserLocations($userid, $level = 1) {
 		if (empty($userid)) {
 			return "ERROR: GetUserLocations called without valid userid ";
 		}
+		$col = empty($_GET["sort"]) ? "rain" : $_GET["sort"];
+		if (!in_array($col, array('rain', 'mintemp'))) {
+			$col = "rain";
+		}
 		$conn = apiDB::getConnection();
 		$locations = Array();
-		$sql = "SELECT l.* FROM cw_user u INNER JOIN userlocation ul on ul.userid = u.id INNER JOIN location l on l.id = ul.locationid WHERE u.id = ".$userid;
+		$sql = "SELECT l.* FROM cw_user u 
+				INNER JOIN userlocation ul on ul.userid = u.id 
+				INNER JOIN location l on l.id = ul.locationid 
+				INNER JOIN ".$col."measurement m on l.id = m.locationid
+			WHERE u.id = ".$userid." 
+			GROUP BY l.latitude, l.longitude, l.name, l.id
+                        ORDER BY max(m.created) DESC ";
 		$result = pg_query($conn, $sql);
 		if (count($result) > 0) {
 			while($row = pg_fetch_array($result)) {
-				$loc = new Location();  // should any args be parsed here?
-				$loc->latitude = $row["latitude"];
-				$loc->longitude = $row["longitude"];
-				$loc->name = $row["name"];
-				$loc->id = $row["id"];
-				$loc->userid = $userid;
-				$loc->rain = apiDB::getLocationMeasurements($loc->id, $userid, "Rain");
-				$loc->mintemp = apiDB::getLocationMeasurements($loc->id, $userid, "Mintemp");
+				if ($level > 0) {
+					$loc = new Location();  // should any args be parsed here?
+					$loc->latitude = $row["latitude"];
+					$loc->longitude = $row["longitude"];
+					$loc->name = $row["name"];
+					$loc->id = $row["id"];
+					$loc->userid = $userid;
+					$loc->rain = apiDB::getLocationMeasurements($loc->id, $userid, "Rain", $level - 1);
+					$loc->mintemp = apiDB::getLocationMeasurements($loc->id, $userid, "Mintemp", $level - 1);
+				} else {
+					$loc = $row["id"];
+				}
 				array_push($locations, $loc);
 			}
 		}
@@ -137,7 +159,7 @@ class apiDB {
 		return $locations;
 	}
 
-	static function getLocations() {
+	static function getLocations($level = 1) {
 		$conn = apiDB::getConnection();
 		$locations = Array();
 
@@ -145,14 +167,18 @@ class apiDB {
 		$result = pg_query($conn, $sql);
 		if (count($result) > 0) {
 			while($row = pg_fetch_array($result)) {
-				$loc = new Location();  
-				$loc->latitude = $row["latitude"];
-				$loc->longitude = $row["longitude"];
-				$loc->name = $row["name"];
-				$loc->id = $row["id"];
-				$loc->userid = $row["userid"];
-				$loc->rain = apiDB::getLocationMeasurements($loc->id, $loc->userid, "Rain");
-				$loc->mintemp = apiDB::getLocationMeasurements($loc->id, $loc->userid, "Mintemp");
+				if ($level > 0) {
+					$loc = new Location();  
+					$loc->latitude = $row["latitude"];
+					$loc->longitude = $row["longitude"];
+					$loc->name = $row["name"];
+					$loc->id = $row["id"];
+					$loc->userid = $row["userid"];
+					$loc->rain = apiDB::getLocationMeasurements($loc->id, $loc->userid, "Rain", $level - 1);
+					$loc->mintemp = apiDB::getLocationMeasurements($loc->id, $loc->userid, "Mintemp", $level - 1);
+				} else {
+					$loc = $row["id"];
+				}
 				array_push($locations, $loc);
 			}
 		}
@@ -160,7 +186,7 @@ class apiDB {
 		return $locations;
 	}
 
-	static function getLocation($locationid) {
+	static function getLocation($locationid, $level = 1) {
 		$conxn = apiDB::getConnection();
 
 		$location = new Location();
@@ -169,19 +195,23 @@ class apiDB {
 		
 		if (pg_num_rows($result) > 0) {
 			$row = pg_fetch_array($result);
-			$location->latitude = $row["latitude"];
-			$location->longitude = $row["longitude"];
-			$location->name = $row["name"];
-			$location->id = $row["id"];
-			$location->userid = $row["userid"];
-			$location->rain = apiDB::getLocationMeasurements($locationid, $row["userid"], "Rain");
-			$location->mintemp = apiDB::getLocationMeasurements($locationid, $row["userid"], "Mintemp");
+			if ($level > 0) {
+				$location->latitude = $row["latitude"];
+				$location->longitude = $row["longitude"];
+				$location->name = $row["name"];
+				$location->id = $row["id"];
+				$location->userid = $row["userid"];
+				$location->rain = apiDB::getLocationMeasurements($locationid, $row["userid"], "Rain", $level - 1);
+				$location->mintemp = apiDB::getLocationMeasurements($locationid, $row["userid"], "Mintemp", $level - 1);
+			} else {
+				$location = $row["id"];
+			}
 		} 
 		pg_close($conxn);
 		return $location;
 	}
 	
-	static function getUserLocation($locationid, $userid) {
+	static function getUserLocation($locationid, $userid, $level = 1) {
 		$conxn = apiDB::getConnection();
 
 		$location = new Location();
@@ -189,19 +219,23 @@ class apiDB {
 		$result = pg_query($conxn, $sql);
 		if (pg_num_rows($result) > 0) {
 			$row = pg_fetch_array($result);
-			$location->latitude = $row["latitude"];
-			$location->longitude = $row["longitude"];
-			$location->name = $row["name"];
-			$location->id = $row["id"];
-			$location->userid = $row["userid"];
-			$location->rain = apiDB::getLocationMeasurements($locationid, $userid, "Rain");
-			$location->mintemp = apiDB::getLocationMeasurements($locationid, $userid, "Mintemp");
+			if ($level > 0) {
+				$location->latitude = $row["latitude"];
+				$location->longitude = $row["longitude"];
+				$location->name = $row["name"];
+				$location->id = $row["id"];
+				$location->userid = $row["userid"];
+				$location->rain = apiDB::getLocationMeasurements($locationid, $userid, "Rain", $level - 1);
+				$location->mintemp = apiDB::getLocationMeasurements($locationid, $userid, "Mintemp", $level - 1);
+			} else {
+                                $location = $row["id"];
+                        }
 		} 
 		pg_close($conxn);
 		return $location;
 	}
 
-	static function getMeasurement($measurementid, $classname) {
+	static function getMeasurement($measurementid, $classname, $level = 1) {
 		$conxn = apiDB::getConnection();
 		$reflector = new ReflectionClass($classname);
 		$measurement = $reflector->newInstance();
@@ -210,18 +244,22 @@ class apiDB {
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$row = pg_fetch_array($result);
-			$measurement->id = $row["id"];
-			$measurement->reading = $row[$measurement->columnName()];
-			$measurement->fromdate = $row["fromdate"];
-			$measurement->todate = $row["todate"];
-			$measurement->locationid = $row["locationid"];
-			$measurement->note = $row["note"];
+			if ($level > 0) {
+				$measurement->id = $row["id"];
+				$measurement->reading = $row[$measurement->columnName()];
+				$measurement->fromdate = $row["fromdate"];
+				$measurement->todate = $row["todate"];
+				$measurement->locationid = $row["locationid"];
+				$measurement->note = $row["note"];
+			} else {
+				$measurement = $row["id"];
+			}
 		} 
 		return $measurement;
 		pg_close($conxn);
 	}
 	
-	static function getLocationMeasurements($locationid, $userid, $classname) {
+	static function getLocationMeasurements($locationid, $userid, $classname, $level = 1) {
 		if (empty($locationid)) {
 			return "ERROR: GetLocationMeasurements called without valid location id ";
 		}
@@ -236,14 +274,18 @@ class apiDB {
 		$result = pg_query($conn, $sql);
 		if ($result) {
 			while($row = pg_fetch_array($result)) {
-				$msm = $reflector->newInstance();
-				$msm->id = $row["id"];
-				$msm->reading = $row[$msm->columnName()];
-				$msm->fromdate = $row["fromdate"];
-				$msm->todate = $row["todate"];
-				$msm->locationid = $row["locationid"];
-				$msm->userid = $userid;
-				$msm->note = $row["note"];
+				if ($level > 0) {
+					$msm = $reflector->newInstance();
+					$msm->id = $row["id"];
+					$msm->reading = $row[$msm->columnName()];
+					$msm->fromdate = $row["fromdate"];
+					$msm->todate = $row["todate"];
+					$msm->locationid = $row["locationid"];
+					$msm->userid = $userid;
+					$msm->note = $row["note"];
+				} else {
+					$msm = $row["id"];
+				}
 				array_push($measurements, $msm);
 			}
 		}
