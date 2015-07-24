@@ -244,7 +244,7 @@ abstract class RESTObject
 						break;
 			default: json_decode($data);
 					 if (json_last_error() == JSON_ERROR_NONE) {
-						$object_array = json_decode($json,TRUE);
+						$object_array = json_decode($data,TRUE);
 					 } else {
 						$xml = simplexml_load_string($data);
 						$json = json_encode($xml);

@@ -124,7 +124,7 @@ class apiDB {
 		if (empty($userid)) {
 			return "ERROR: GetUserLocations called without valid userid ";
 		}
-		$col = empty($_GET["sort"]) ? "rain" : $_GET["sort"];
+		$col = empty($_GET["measure"]) ? "rain" : $_GET["measure"];
 		if (!in_array($col, array('rain', 'mintemp'))) {
 			$col = "rain";
 		}
@@ -291,6 +291,24 @@ class apiDB {
 		}
 		pg_close($conn);
 		return $measurements;
+	}
+	
+	static function getMaxMeasurementDate($locationid) {
+		if (empty($locationid)) {
+                        return "ERROR: GetMaxMeasurementDate called without valid location id ";
+                }
+		$conn = apiDB::getConnection();
+		$col = empty($_GET["measure"]) ? "rain" : $_GET["measure"];
+                if (!in_array($col, array('rain', 'mintemp'))) {
+                        $col = "rain";
+                }
+                $sql = "SELECT to_char(max(todate + interval '1'), 'YYYY-MM-DD')||'T'||to_char(max(todate + interval '1'),'HH24:MI:SS')  as latestdate FROM ".$col."measurement m WHERE m.locationid = ".$locationid;
+		$result = pg_query($conn, $sql);
+                if ($result) {
+			$row = pg_fetch_array($result);
+			return $row["latestdate"];
+		}
+		return null;
 	}
 	
 	static function addUser(&$user) {

@@ -153,6 +153,13 @@ class Location extends RESTObject
 		$mintemp->locationid = $this->id;
 		return $mintemp->process();
 	 }
+
+     protected function latestdate() {
+                if (empty($this->id)) {
+                        return $this->_response("Location id not set. Cannot run \"latestdate\" without a valid location id.", 404);
+                }
+                return apiDB::getMaxMeasurementDate($this->id, get_class($this));
+     }
 }
 
 ?>

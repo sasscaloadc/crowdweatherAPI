@@ -87,7 +87,7 @@ abstract class Measurement extends RESTObject
 		$measurement->todate = $array["todate"];
 		$measurement->locationid = $array["locationid"];
 		$measurement->note = $array["note"];
-		
+error_log("READING: ".$this->columnName()." = ". $measurement->reading);		
 		return apiDB::addMeasurement($measurement);
 	}
 	
