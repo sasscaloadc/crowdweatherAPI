@@ -133,7 +133,7 @@ class apiDB {
 		$sql = "SELECT l.* FROM cw_user u 
 				INNER JOIN userlocation ul on ul.userid = u.id 
 				INNER JOIN location l on l.id = ul.locationid 
-				INNER JOIN ".$col."measurement m on l.id = m.locationid
+				LEFT OUTER JOIN ".$col."measurement m on l.id = m.locationid
 			WHERE u.id = ".$userid." 
 			GROUP BY l.latitude, l.longitude, l.name, l.id
                         ORDER BY max(m.created) DESC ";
@@ -483,10 +483,10 @@ class apiDB {
 		$conxn = apiDB::getConnection();
 		$sql = "INSERT INTO ".$measurement->tableName()." (fromdate, todate, locationid, ".$measurement->columnName();
 		$sql .= empty($measurement->note)? "" : ", note";
-		$sql .= ") VALUES ('".$measurement->fromdate."','".$measurement->todate."', ".$measurement->locationid.", ".$measurement->reading;
+		$sql .= ") VALUES (TIMESTAMP '".$measurement->fromdate."', TIMESTAMP '".$measurement->todate."', ".$measurement->locationid.", ".$measurement->reading;
 		$sql .= empty($measurement->note)? "" : ", '".$measurement->note."'";
 		$sql .= "); ";
-		
+	error_log("==========fromDate ".$measurement->fromdate);	
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
@@ -544,5 +544,40 @@ class apiDB {
 		}
 	}
 
+ 	static function getLatestMeasurements($userid) {
+		if (empty($userid)) {
+			return "Error, no user id detected or specified for latest measurements";
+		}
+		$conxn = apiDB::getConnection();
+		$sql = "SELECT l.name, l.id AS locationid, r.id, r.rain AS measurement, r.todate as todate, r.created AS crtime, 'rain' AS mtype 
+                        FROM location l INNER JOIN userlocation ul ON l.id = ul.locationid 
+	                                LEFT OUTER JOIN rainmeasurement r ON r.locationid = ul.locationid
+                        WHERE userid = ".$userid." AND r.created IS NOT NULL
+                        UNION
+                        SELECT l.name, l.id AS locationid, m.id, m.mintemp AS measurement, m.todate as todate, m.created AS crtime, 'mintemp' AS mtype 
+                        FROM location l INNER JOIN userlocation ul ON l.id = ul.locationid 
+	                        LEFT OUTER JOIN mintempmeasurement m ON m.locationid = ul.locationid
+                        WHERE userid = ".$userid." AND m.created IS NOT NULL
+                        ORDER BY crtime DESC
+                        LIMIT 20 ";
+		$result = pg_query($conxn, $sql);
+                $results_array = Array();
+		if ($result) {
+                        while($row = pg_fetch_array($result)) {
+                            $item = Array();
+                            $item["locationid"] = $row["locationid"];
+                            $item["locationname"] = $row["name"];
+                            $item["rainid"] = $row["mtype"] == "rain" ? $row["id"] : "";
+                            $item["mintempid"] =$row["mtype"] == "mintemp" ? $row["id"] : "";
+                            $item["rain"] = $row["mtype"] == "rain" ? $row["measurement"] : "";
+                            $item["mintemp"] = $row["mtype"] == "mintemp" ? $row["measurement"] : "";
+                            $item["raintodate"] = $row["mtype"] == "rain" ? $row["todate"] : "";
+                            $item["mintemptodate"] = $row["mtype"] == "mintemp" ? $row["todate"] : "";
+                            //$item[""] = $row[""];
+                            array_push($results_array, $item);
+                        }
+                }
+                return $results_array;
+        }
 }
 ?>

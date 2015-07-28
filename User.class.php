@@ -126,7 +126,17 @@ class User extends RESTObject
 		$linkString = "https://".apiDB::$servername."/".apiDB::dirname()."/users/" . $this->id ;
 		return "<a href=\"".$linkString."\">".$this->email."</a>";
 	}
-	
+
+     protected function latestmeasurements() {
+         $userid = $this->id;
+         if (empty($this->id)) {
+            $user = apiDB::getUserByEmail($_SERVER['PHP_AUTH_USER']);
+	    $userid = $user->id;
+         }	
+         return $this->display(apiDB::getLatestMeasurements($userid));
+     }
+
 }
+
 
 ?>

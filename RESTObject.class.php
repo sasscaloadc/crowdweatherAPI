@@ -214,10 +214,9 @@ abstract class RESTObject
 	  *  This function gets called on the last Object in the REST URL. It will execute the relevant method (GET/PUT/POST/DELETE) and display or update results.
 	  */
 	public function execute() {
-//error_log("EXECUTE!!".$this->method);		
 		switch ($this->method) {
 			case "GET":
-				return $this->display();
+				return $this->display(empty($this->id) ? $this->get_array_all() : $this->get_array_instance());
 				break;
 			case "PUT":
 				return $this->put_array($this->prepareContent($this->file));
@@ -254,12 +253,10 @@ abstract class RESTObject
 		return $object_array;
 	}
 	
-	public function display() {  
-        header("Access-Control-Allow-Origin: *");
-        header("Access-Control-Allow-Methods: *");
+	public function display($display_array) {  
+        	header("Access-Control-Allow-Origin: *");
+        	header("Access-Control-Allow-Methods: *");
 
-		$display_array = empty($this->id) ? $this->get_array_all() : $this->get_array_instance();
-		
 		switch($this->extension) {
 			case "xml":
 				header("Content-Type: application/xml");
