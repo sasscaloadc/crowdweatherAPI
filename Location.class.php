@@ -160,6 +160,19 @@ class Location extends RESTObject
                 }
                 return apiDB::getMaxMeasurementDate($this->id, get_class($this));
      }
+
+     protected function graph() {
+		$type = empty($_GET["type"]) ? "rain" : $_GET["type"];
+		$period = empty($_GET["period"]) ? 30 : $_GET["period"];
+		$graph = empty($_GET["graph"]) ? "bar" : $_GET["graph"];
+
+		if (empty($this->id)) {
+                        return $this->_response("Location id not set. Cannot run \"graph\" without a valid location id.", 404);
+                }
+
+		return $this->display(apiDB::graphData($type, $this->id, $period, $graph, 'Africa/Windhoek'));
+     }
+
 }
 
 ?>

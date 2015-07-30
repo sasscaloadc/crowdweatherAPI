@@ -549,12 +549,12 @@ class apiDB {
 			return "Error, no user id detected or specified for latest measurements";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "SELECT l.name, l.id AS locationid, r.id, r.rain AS measurement, r.todate as todate, r.created AS crtime, 'rain' AS mtype 
+		$sql = "SELECT l.name, l.id AS locationid, r.id, r.rain AS measurement, r.fromdate::date as fromdate, r.todate::date as todate, (2147483640 - extract(epoch from r.created)) AS key, r.created as crtime, 'rain' AS mtype 
                         FROM location l INNER JOIN userlocation ul ON l.id = ul.locationid 
 	                                LEFT OUTER JOIN rainmeasurement r ON r.locationid = ul.locationid
                         WHERE userid = ".$userid." AND r.created IS NOT NULL
                         UNION
-                        SELECT l.name, l.id AS locationid, m.id, m.mintemp AS measurement, m.todate as todate, m.created AS crtime, 'mintemp' AS mtype 
+                        SELECT l.name, l.id AS locationid, m.id, m.mintemp AS measurement, m.fromdate::date as fromdate, m.todate::date as todate, (2147483640 - extract(epoch from m.created)) AS key, m.created as crtime, 'mintemp' AS mtype 
                         FROM location l INNER JOIN userlocation ul ON l.id = ul.locationid 
 	                        LEFT OUTER JOIN mintempmeasurement m ON m.locationid = ul.locationid
                         WHERE userid = ".$userid." AND m.created IS NOT NULL
@@ -567,17 +567,55 @@ class apiDB {
                             $item = Array();
                             $item["locationid"] = $row["locationid"];
                             $item["locationname"] = $row["name"];
-                            $item["rainid"] = $row["mtype"] == "rain" ? $row["id"] : "";
-                            $item["mintempid"] =$row["mtype"] == "mintemp" ? $row["id"] : "";
+                            $item["mid"] = $row["id"];
                             $item["rain"] = $row["mtype"] == "rain" ? $row["measurement"] : "";
                             $item["mintemp"] = $row["mtype"] == "mintemp" ? $row["measurement"] : "";
-                            $item["raintodate"] = $row["mtype"] == "rain" ? $row["todate"] : "";
-                            $item["mintemptodate"] = $row["mtype"] == "mintemp" ? $row["todate"] : "";
+                            $item["fromdate"] = $row["fromdate"];
+                            $item["todate"] = $row["todate"];
+                            $item["mtype"] = $row["mtype"];
+                            $item["crtime"] = $row["crtime"];
                             //$item[""] = $row[""];
-                            array_push($results_array, $item);
+                            //array_push($results_array, $item);
+                            //$results_array[$item["locationid"]."_".$item["mtype"]."_".$item["mid"]] = $item;
+                            $results_array[$row["key"]] = $item;
                         }
                 }
                 return $results_array;
         }
+
+	static function graphData($type, $locationid, $period, $graph, $timezone) {
+                if (empty($locationid)) {
+                        return "ERROR, no measurement id specified for deleting measurement";
+                }
+                $conxn = apiDB::getConnection();
+                $sql = "SELECT ".$type.", fromdate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days, 
+                               ROUND( CAST((rain/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave 
+                        FROM ".$type."measurement 
+                        WHERE locationid = ".$locationid."
+                           AND fromdate >= CURRENT_TIMESTAMP - INTERVAL '".$period." days'
+                        ORDER BY fromdate ";
+		$result = pg_query($conxn, $sql);
+		$results_array = Array();
+		$data = Array();
+		if ($result) {
+			while($row = pg_fetch_array($result)) {
+				for ($i = 0; $i < $row["days"]; $i++) {
+					$date = new DateTime($row["fromdate"], new DateTimeZone($timezone));
+					$date->add(new DateInterval('P'.$i.'D'));
+					$item = Array();
+                                	//$item["unit"] = date_format($date, 'Y-m-d');
+					//$item["value"] = $row["d_ave"];
+					array_push($item, date_format($date, 'Y-m-d'));
+					array_push($item, floatval($row["d_ave"]));
+					array_push($data, $item);
+				}
+			}
+			$datasets = Array();
+			$datasets["type"] = $graph;
+			$datasets["data"] = $data;
+			$results_array["JSChart"]["datasets"][0] = $datasets;
+		}
+		return $data;//$results_array;
+	}
 }
 ?>
