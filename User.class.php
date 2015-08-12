@@ -136,6 +136,10 @@ class User extends RESTObject
          return $this->display(apiDB::getLatestMeasurements($userid));
      }
 
+     protected function authenticate () {
+                return $_SERVER['PHP_AUTH_USER'];
+     }
+
 }
 
 

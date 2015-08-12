@@ -130,13 +130,13 @@ class apiDB {
 		}
 		$conn = apiDB::getConnection();
 		$locations = Array();
-		$sql = "SELECT l.* FROM cw_user u 
+		$sql = "SELECT l.*, CASE WHEN MAX(created) IS NULL THEN '1900-01-01' ELSE MAX(created) END AS createdtime FROM cw_user u 
 				INNER JOIN userlocation ul on ul.userid = u.id 
 				INNER JOIN location l on l.id = ul.locationid 
 				LEFT OUTER JOIN ".$col."measurement m on l.id = m.locationid
 			WHERE u.id = ".$userid." 
 			GROUP BY l.latitude, l.longitude, l.name, l.id
-                        ORDER BY max(m.created) DESC ";
+                        ORDER BY createdtime DESC ";
 		$result = pg_query($conn, $sql);
 		if (count($result) > 0) {
 			while($row = pg_fetch_array($result)) {
@@ -588,7 +588,7 @@ class apiDB {
                         return "ERROR, no measurement id specified for deleting measurement";
                 }
                 $conxn = apiDB::getConnection();
-                $sql = "SELECT ".$type.", fromdate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days, 
+                $sql = "SELECT ".$type.", todate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days, 
                                ROUND( CAST((rain/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave 
                         FROM ".$type."measurement 
                         WHERE locationid = ".$locationid."
@@ -600,12 +600,10 @@ class apiDB {
 		if ($result) {
 			while($row = pg_fetch_array($result)) {
 				for ($i = 0; $i < $row["days"]; $i++) {
-					$date = new DateTime($row["fromdate"], new DateTimeZone($timezone));
+					$date = new DateTime($row["todate"], new DateTimeZone($timezone));
 					$date->add(new DateInterval('P'.$i.'D'));
 					$item = Array();
-                                	//$item["unit"] = date_format($date, 'Y-m-d');
-					//$item["value"] = $row["d_ave"];
-					array_push($item, date_format($date, 'Y-m-d'));
+					array_push($item, date_format($date, 'm/d'));
 					array_push($item, floatval($row["d_ave"]));
 					array_push($data, $item);
 				}
@@ -615,7 +613,8 @@ class apiDB {
 			$datasets["data"] = $data;
 			$results_array["JSChart"]["datasets"][0] = $datasets;
 		}
-		return $data;//$results_array;
+		return $results_array;
 	}
+
 }
 ?>
