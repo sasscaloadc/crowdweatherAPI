@@ -62,7 +62,7 @@ class User extends RESTObject
 		
 	}
 	
-	public function post_array($array) {
+	public function post_array($array, &$message) {
 		$user = new User();
 		
 		$user->email = $array["email"];
@@ -70,7 +70,7 @@ class User extends RESTObject
 		// access is 1 by database default
 	
 		//NOTE: No access restrictions. Anyone with a login (also guest:guest) can add a newuser	
-		return apiDB::addUser($user);
+		return apiDB::addUser($user, $message);
 	}
 	
 	public function delete_array($array) {

@@ -311,24 +311,29 @@ class apiDB {
 		return null;
 	}
 	
-	static function addUser(&$user) {
+	static function addUser(&$user, &$message) {
 		if (get_class($user) != "User") {
-				return "Error, received object other than User";
+				$message = "Error, received object other than User";
+				return 400;
 		}
 		if (empty($user->email)) {
-			return "Error, no email specified for user";
+			$message = "Error, no email specified for user";
+			return 400;
 		}
 		if (empty($user->password)) {
-			return "Error, no password specified for user";
+			$message = "Error, no password specified for user";
+			return 400;
 		}
 		$conxn = apiDB::getConnection();
 		$sql = "INSERT INTO cw_user (email, password) values ('".$user->email."', '".$user->password."') RETURNING id ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
-			return $rows." User(s) Added";
+			$message = $rows." User(s) Added";
+			return 200;
 		} else {
-			return "Error with insert query : ".pg_last_error($conxn);
+			$message = "Error with insert query : ".pg_last_error($conxn);
+			return 400;
 		}
 	}
 	
@@ -390,21 +395,26 @@ class apiDB {
 		}
 	}
 	
-	static function addLocation(&$location) {
+	static function addLocation(&$location, &$message) {
 		if (get_class($location) != "Location") {
-				return "Error, received object other than Location";
+			$message = "Error, received object other than Location";
+			return 400;
 		}
 		if (empty($location->userid)) {
-			return "Error, no userid specified for location";
+			$message = "Error, no userid specified for location";
+			return 400;
 		}
 		if (empty($location->latitude)) {
-			return "Error, no latitude specified for location";
+			$message = "Error, no latitude specified for location";
+			return 400;
 		}
 		if (empty($location->longitude)) {
-			return "Error, no longitude specified for location";
+			$message = "Error, no longitude specified for location";
+			return 400;
 		}
 		if (empty($location->name)) {
-			return "Error, no name specified for location";
+			$message = "Error, no name specified for location";
+			return 400;
 		}
 		$conxn = apiDB::getConnection();
 		$sql = "INSERT INTO location (latitude, longitude, name) values (".$location->latitude.",".$location->longitude.", '".$location->name."'); ";
@@ -413,9 +423,11 @@ class apiDB {
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
-			return "Location Added";
+			$message = "Location Added";
+			return 200;
 		} else { 
-			return "Error with insert query : ".pg_last_error($conxn);
+			$message = "Error with insert query : ".pg_last_error($conxn);
+			return 400;
 		}
 	}
 	
@@ -453,7 +465,7 @@ class apiDB {
 			return "Error, no location id specified for deleting location";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "DELETE FROM userlocation WHERE locationid = ".$locationid." ; DELETE FROM measurement WHERE locationid = ".$locationid." ;DELETE FROM location WHERE id = ".$locationid." RETURNING id; ";
+		$sql = "DELETE FROM userlocation WHERE locationid = ".$locationid." ; DELETE FROM rainmeasurement WHERE locationid = ".$locationid." ; DELETE FROM mintempmeasurement WHERE locationid = ".$locationid." ;DELETE FROM location WHERE id = ".$locationid." RETURNING id; ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_fetch_row($result); 
@@ -464,21 +476,26 @@ class apiDB {
 		}
 	}
 	
-	static function addMeasurement($measurement) {
+	static function addMeasurement($measurement, &$message) {
 		if (!is_subclass_of ($measurement, "Measurement")) {
-				return "Error, received object other than Measurement subclass";
+			$message = "Error, received object other than Measurement subclass";
+			return 400;
 		}
-		if (empty($measurement->reading)) {
-			return "Error, reading must be specified for measurement";
+		if (is_null($measurement->reading)) {
+			$message = "Error, reading must be specified for measurement";
+			return 400;
 		}
 		if (empty($measurement->locationid)) {
-			return "Error, no location id specified for measurement";
+			$message = "Error, no location id specified for measurement";
+			return 400;
 		}
 		if (empty($measurement->fromdate)) {
-			return "Error, no 'from' date specified for measurement";
+			$message = "Error, no 'from' date specified for measurement";
+			return 400;
 		}
 		if (empty($measurement->todate)) {
-			return "Error, no 'to' date specified for measurement";
+			$message = "Error, no 'to' date specified for measurement";
+			return 400;
 		}
 		$conxn = apiDB::getConnection();
 		$sql = "INSERT INTO ".$measurement->tableName()." (fromdate, todate, locationid, ".$measurement->columnName();
@@ -486,13 +503,17 @@ class apiDB {
 		$sql .= ") VALUES (TIMESTAMP '".$measurement->fromdate."', TIMESTAMP '".$measurement->todate."', ".$measurement->locationid.", ".$measurement->reading;
 		$sql .= empty($measurement->note)? "" : ", '".$measurement->note."'";
 		$sql .= "); ";
-	error_log("==========fromDate ".$measurement->fromdate);	
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
-			return "Measurement Added: \"".$measurement->columnName()."\"";
+			$message = "Measurement Added: \"".$measurement->columnName()."\"";
+			return 200;
 		} else { 
-			return "Error with ".$measurement->columnName()." measurement insert query : ".pg_last_error($conxn);
+			$error = pg_last_error($conxn);
+			$message = "Error with ".$measurement->columnName()." measurement insert query : ".$error;
+			if (strpos($error, "overlap") !== false) return 418;
+			if (strpos($error, "must come before") !== false) return 420;
+			return 400;
 		}
 	}
 	
@@ -588,12 +609,21 @@ class apiDB {
                         return "ERROR, no measurement id specified for deleting measurement";
                 }
                 $conxn = apiDB::getConnection();
-                $sql = "SELECT ".$type.", todate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days, 
+                $sql_old = "SELECT ".$type.", todate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days, 
                                ROUND( CAST((rain/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave 
                         FROM ".$type."measurement 
                         WHERE locationid = ".$locationid."
                            AND fromdate >= CURRENT_TIMESTAMP - INTERVAL '".$period." days'
                         ORDER BY fromdate ";
+		$sql = "SELECT CASE WHEN r.".$type." IS NULL THEN 0 ELSE r.".$type." END, d.dt as todate, CASE WHEN r.days IS NULL THEN 1 ELSE r.days END, CASE WHEN r.d_ave IS NULL THEN 0 ELSE r.d_ave END
+			FROM getAllDays(CURRENT_DATE, ".$period.") d left join (
+			SELECT ".$type.", todate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days,
+				ROUND( CAST((".$type."/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave
+			FROM ".$type."measurement
+			WHERE locationid = ".$locationid."
+			) r ON d.dt = r.todate
+			ORDER BY d.dt ";
+//error_log( $sql2);
 		$result = pg_query($conxn, $sql);
 		$results_array = Array();
 		$data = Array();
@@ -613,7 +643,8 @@ class apiDB {
 			$datasets["data"] = $data;
 			$results_array["JSChart"]["datasets"][0] = $datasets;
 		}
-		return $results_array;
+		//return $results_array;
+		return $data;
 	}
 
 }

@@ -56,7 +56,7 @@ abstract class RESTObject
 	abstract function get_array_all();
 
 	abstract function put_array($array);
-	abstract function post_array($array);
+	abstract function post_array($array, &$message);
 	abstract function delete_array($array);
 	/** 
 	  * This function is used to retrieve specific details of an object from the database and populating this object's properties.
@@ -201,6 +201,8 @@ abstract class RESTObject
 					415 => 'Unsupported Media Type',  
 					416 => 'Requested Range Not Satisfiable',  
 					417 => 'Expectation Failed',  
+					418 => 'Incorrect Date Order',  
+					420 => 'Date overlap in Measurement table',  
 					500 => 'Internal Server Error',  
 					501 => 'Not Implemented',  
 					502 => 'Bad Gateway',  
@@ -214,6 +216,7 @@ abstract class RESTObject
 	  *  This function gets called on the last Object in the REST URL. It will execute the relevant method (GET/PUT/POST/DELETE) and display or update results.
 	  */
 	public function execute() {
+		$message = "";
 		switch ($this->method) {
 			case "GET":
 				return $this->display(empty($this->id) ? $this->get_array_all() : $this->get_array_instance());
@@ -222,7 +225,8 @@ abstract class RESTObject
 				return $this->put_array($this->prepareContent($this->file));
 				break;
 			case "POST":
-				return $this->post_array($this->prepareContent($this->file));
+				$code = $this->post_array($this->prepareContent($this->file), $message); 
+				return $this->_response($message, $code);
 				break;
 			case "DELETE":
 				return $this->delete_array($this->prepareContent($this->file));

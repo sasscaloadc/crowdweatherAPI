@@ -71,7 +71,7 @@ class Location extends RESTObject
 		}
 	}
 	
-	public function post_array($array) {
+	public function post_array($array, &$message) {
 		$location = new Location();
 		
 		$location->name = $array["name"];
@@ -85,13 +85,15 @@ class Location extends RESTObject
 		} else {  // check permission ...
 			$user = apiDB::getUser($location->userid);
 			if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
-				return "Not authorized to update location for User ".$location->userid;
+				$message = "Not authorized to update location for User ".$location->userid;
+				return 401;
 			}
 		}
 		if ($this->access < 1) {
-			return "Not authorized to add any locations: guest or disabled account";
+			$message = "Not authorized to add any locations: guest or disabled account";
+			return 401;
 		}
-		return apiDB::addLocation($location);
+		return apiDB::addLocation($location, $message);
 	}
 	
 	public function delete_array($array) {
@@ -106,7 +108,7 @@ class Location extends RESTObject
 	}	
 	
 	public function getInstanceDetails($id) {
-		$location = empty($this->userid) ? apiDB::getLocation($id) : apiDB::getUserLocation($id, $this->userid, $this);
+		$location = empty($this->userid) ? apiDB::getLocation($id) : apiDB::getUserLocation($id, $this->userid);
 
 		if (empty($location->id)) {
 			return self::NO_SUCH_ID;

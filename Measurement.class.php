@@ -73,13 +73,14 @@ abstract class Measurement extends RESTObject
 		}
 	}
 	
-	public function post_array($array) {
+	public function post_array($array, &$message) {
                 $reflector = new ReflectionClass(get_class($this)); 
                 $measurement = $reflector->newInstance();
 
                 $user = apiDB::getUserByLocationId($array["locationid"]);
                 if (($_SERVER['PHP_AUTH_USER'] != $user->email) && ($this->access <= 1)) {
-                        return "Not authorized to add measurements to location ".$array["locationid"];
+                        $message = "Not authorized to add measurements to location ".$array["locationid"];
+			return 401;
                 }
 
 		$measurement->reading = $array[$this->columnName()];
@@ -87,8 +88,7 @@ abstract class Measurement extends RESTObject
 		$measurement->todate = $array["todate"];
 		$measurement->locationid = $array["locationid"];
 		$measurement->note = $array["note"];
-error_log("READING: ".$this->columnName()." = ". $measurement->reading);		
-		return apiDB::addMeasurement($measurement);
+		return apiDB::addMeasurement($measurement, $message);
 	}
 	
 	public function delete_array($array) {

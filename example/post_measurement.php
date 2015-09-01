@@ -28,10 +28,10 @@ $data = Array();
 $data["locationid"] = 1;
 //$data["locationid"] = 31;
 //$data["rain"] = 13;
-$data["mintemp"] = 19;
-$data["fromdate"] = '2015-04-30';
-$data["todate"] = '2015-05-01 10:59 ';
-$data["note"] = "test trigger for date range";
+$data["mintemp"] = -19;
+$data["fromdate"] = '2015-04-29';
+$data["todate"] = '2015-04-29 10:59 ';
+$data["note"] = "test ";
 
 $fields = json_encode($data);
 
@@ -57,6 +57,8 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
 
 if ( curl_exec($ch)) {;
 	echo "<br>Done: Success";
+        $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        echo "<br>Status : ".$http_status;
 } else {
 	echo "<br>Done: Failure<br>";
     echo "cURL error : ".curl_error($ch);
