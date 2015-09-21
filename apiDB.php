@@ -130,7 +130,7 @@ class apiDB {
 		}
 		$conn = apiDB::getConnection();
 		$locations = Array();
-		$sql = "SELECT l.*, CASE WHEN MAX(created) IS NULL THEN '1900-01-01' ELSE MAX(created) END AS createdtime FROM cw_user u 
+		$sql = "SELECT l.*, CASE WHEN MAX(m.created) IS NULL THEN '1900-01-01' ELSE MAX(m.created) END AS createdtime FROM cw_user u 
 				INNER JOIN userlocation ul on ul.userid = u.id 
 				INNER JOIN location l on l.id = ul.locationid 
 				LEFT OUTER JOIN ".$col."measurement m on l.id = m.locationid
@@ -394,6 +394,42 @@ class apiDB {
 			return "Error with delete query : ".pg_last_error($conxn);
 		}
 	}
+
+	static function verifyUser($userid, $token, &$message) {
+		$conxn = apiDB::getConnection();
+		$sql = "SELECT email, password, id FROM cw_user WHERE id = " . $userid;
+		$result = pg_query($conxn, $sql);
+		if ($result) {
+			$rows = pg_fetch_row($result);
+        		$hashString = $rows[0];
+	        	$hashString .= $rows[1];
+        		$hashkey = md5($hashString);
+		} else {
+			$message = "Error with verify query : ".pg_last_error($conxn);
+			return 400; //Bad Request
+		}
+		if (strcmp($hashkey, $token) == 0) {
+			error_log("match ".$hashkey);
+			$sql = "UPDATE cw_user SET verified = 1 WHERE id = " . $userid;
+			$result = pg_query($conxn, $sql);
+			if ($result) {
+				$rows = pg_affected_rows($result);
+				if ($rows < 1) {
+					$message = "Could not verify user " . $userid . " ... ";
+					return 404; //Not Found
+				} else {
+					$message = "User " . $userid . " verified";
+					return 200;
+				}
+			} else {
+				$message = "Error with verify update query : ".pg_last_error($conxn);
+				return 404; //Not Found
+			}
+		} else {
+			$message = "Invalid verification token for user " . $userid;
+			return 400; //Bad Request
+		}
+	}
 	
 	static function addLocation(&$location, &$message) {
 		if (get_class($location) != "Location") {
@@ -615,13 +651,13 @@ class apiDB {
                         WHERE locationid = ".$locationid."
                            AND fromdate >= CURRENT_TIMESTAMP - INTERVAL '".$period." days'
                         ORDER BY fromdate ";
-		$sql = "SELECT CASE WHEN r.".$type." IS NULL THEN 0 ELSE r.".$type." END, d.dt as todate, CASE WHEN r.days IS NULL THEN 1 ELSE r.days END, CASE WHEN r.d_ave IS NULL THEN 0 ELSE r.d_ave END
+		$sql = "SELECT CASE WHEN r.".$type." IS NULL THEN 0 ELSE r.".$type." END, d.dt as fdate, CASE WHEN r.days IS NULL THEN 1 ELSE r.days END, CASE WHEN r.d_ave IS NULL THEN 0 ELSE r.d_ave END
 			FROM getAllDays(CURRENT_DATE, ".$period.") d left join (
-			SELECT ".$type.", todate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days,
-				ROUND( CAST((".$type."/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave
-			FROM ".$type."measurement
-			WHERE locationid = ".$locationid."
-			) r ON d.dt = r.todate
+				SELECT ".$type.", fromdate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days,
+					ROUND( CAST((".$type."/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave
+				FROM ".$type."measurement
+				WHERE locationid = ".$locationid."
+				) r ON d.dt = r.fromdate
 			ORDER BY d.dt ";
 //error_log( $sql2);
 		$result = pg_query($conxn, $sql);
@@ -630,7 +666,7 @@ class apiDB {
 		if ($result) {
 			while($row = pg_fetch_array($result)) {
 				for ($i = 0; $i < $row["days"]; $i++) {
-					$date = new DateTime($row["todate"], new DateTimeZone($timezone));
+					$date = new DateTime($row["fdate"], new DateTimeZone($timezone));
 					$date->add(new DateInterval('P'.$i.'D'));
 					$item = Array();
 					array_push($item, date_format($date, 'm/d'));

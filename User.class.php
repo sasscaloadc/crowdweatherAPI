@@ -122,7 +122,7 @@ class User extends RESTObject
 		return $loc->process();
 	 }
 
-	function apiLink() {
+     function apiLink() {
 		$linkString = "https://".apiDB::$servername."/".apiDB::dirname()."/users/" . $this->id ;
 		return "<a href=\"".$linkString."\">".$this->email."</a>";
 	}
@@ -140,6 +140,21 @@ class User extends RESTObject
                 return $_SERVER['PHP_AUTH_USER'];
      }
 
+     protected function verify() {
+        if (empty($this->id)) {
+            $user = apiDB::getUserByEmail($_SERVER['PHP_AUTH_USER']);
+	    $this->id = $user->id;
+        }	
+	if (empty($this->id)) {
+		return $this->_response("User id not set. Cannot run \"verify\" without a valid user id.", 404);
+	}
+	if (empty($_GET["token"])) {
+		return $this->_response("No token specified. Cannot run \"verify\" without a valid \"token\" parameter.", 404);
+	}
+	$message = "";
+	$code =  apiDB::verifyUser($this->id, $_GET["token"], $message);
+	return $this->_response($message, $code);
+     }
 }
 
 
