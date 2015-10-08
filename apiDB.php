@@ -16,19 +16,27 @@ class apiDB {
 	static $password = "5455c4l_";
 	static $dbname = "crowdweather";
 
-	static function validate($username, $password) {
+	static function validate($username, $password, &$message) {
 		$conn = apiDB::getConnection();
 
-		$sql = "SELECT password, access FROM cw_user WHERE email = '".$username."' ";
+		$sql = "SELECT password, access, verified, current_date - created::date as days, to_char(created, 'DD Mon YYYY') as crdate FROM cw_user WHERE email = '".$username."' ";
 		$result = pg_query($conn, $sql);
 		if (($result) && (!empty($password))) {
 			$row = pg_fetch_array($result);
 			if ($password === $row["password"]) {
-				return $row["access"];
+				if (($row["verified"] > 0) || ($row["days"] < 5)) { 
+					pg_close($conn);
+					return $row["access"];
+				} else {
+					$message = "Not verified ".$username. " ".$row["crdate"];
+					pg_close($conn);
+					return -1;  // Not verified
+				}
 			}
 		}
+		$message = "Not authorized ";
 		pg_close($conn);
-		return -1;
+		return -2;  // Not authorized
 	}
 
 	static function dirname() {
@@ -418,7 +426,8 @@ class apiDB {
 					$message = "Could not verify user " . $userid . " ... ";
 					return 404; //Not Found
 				} else {
-					$message = "User " . $userid . " verified";
+					$message = "Account verified";
+					//$message = "User " . $userid . " verified";
 					return 200;
 				}
 			} else {
@@ -426,6 +435,9 @@ class apiDB {
 				return 404; //Not Found
 			}
 		} else {
+error_log("Hash : ".$hashkey);
+error_log("Token: ".$token);
+error_log("HashString: -*".$hashString."*-");
 			$message = "Invalid verification token for user " . $userid;
 			return 400; //Bad Request
 		}
@@ -540,6 +552,9 @@ class apiDB {
 		$sql .= empty($measurement->note)? "" : ", '".$measurement->note."'";
 		$sql .= "); ";
 		$result = pg_query($conxn, $sql);
+error_log($sql);
+error_log(empty($measurement->note));
+error_log("-".$measurement->note."-");
 		if ($result) {
 			$rows = pg_affected_rows($result); 
 			$message = "Measurement Added: \"".$measurement->columnName()."\"";
@@ -645,20 +660,14 @@ class apiDB {
                         return "ERROR, no measurement id specified for deleting measurement";
                 }
                 $conxn = apiDB::getConnection();
-                $sql_old = "SELECT ".$type.", todate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days, 
-                               ROUND( CAST((rain/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave 
-                        FROM ".$type."measurement 
-                        WHERE locationid = ".$locationid."
-                           AND fromdate >= CURRENT_TIMESTAMP - INTERVAL '".$period." days'
-                        ORDER BY fromdate ";
 		$sql = "SELECT CASE WHEN r.".$type." IS NULL THEN 0 ELSE r.".$type." END, d.dt as fdate, CASE WHEN r.days IS NULL THEN 1 ELSE r.days END, CASE WHEN r.d_ave IS NULL THEN 0 ELSE r.d_ave END
 			FROM getAllDays(CURRENT_DATE, ".$period.") d left join (
-				SELECT ".$type.", fromdate::date, ROUND(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC), 0) AS days,
+				SELECT ".$type.", cast(todate - interval '8 hours' - interval '1 second' as date) as todate, CEIL(CAST ((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0 AS NUMERIC)) AS days,
 					ROUND( CAST((".$type."/((EXTRACT(EPOCH FROM todate)-EXTRACT(EPOCH FROM fromdate)) / 86400.0)) AS NUMERIC), 1) AS d_ave
 				FROM ".$type."measurement
 				WHERE locationid = ".$locationid."
-				) r ON d.dt = r.fromdate
-			ORDER BY d.dt ";
+				) r ON d.dt = r.todate
+			ORDER BY d.dt DESC ";
 //error_log( $sql2);
 		$result = pg_query($conxn, $sql);
 		$results_array = Array();
@@ -667,20 +676,21 @@ class apiDB {
 			while($row = pg_fetch_array($result)) {
 				for ($i = 0; $i < $row["days"]; $i++) {
 					$date = new DateTime($row["fdate"], new DateTimeZone($timezone));
-					$date->add(new DateInterval('P'.$i.'D'));
+					$date->sub(new DateInterval('P'.$i.'D'));
 					$item = Array();
 					array_push($item, date_format($date, 'm/d'));
 					array_push($item, floatval($row["d_ave"]));
 					array_push($data, $item);
+					if ($i > 0) pg_fetch_array($result); //otherwise the range shows up in duplicate
 				}
 			}
-			$datasets = Array();
-			$datasets["type"] = $graph;
-			$datasets["data"] = $data;
-			$results_array["JSChart"]["datasets"][0] = $datasets;
+			//$datasets = Array();
+			//$datasets["type"] = $graph;
+			//$datasets["data"] = array_reverse($data);
+			//$results_array["JSChart"]["datasets"][0] = $datasets;
 		}
 		//return $results_array;
-		return $data;
+		return array_reverse($data);
 	}
 
 }

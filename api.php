@@ -12,33 +12,38 @@ try {
 	$user = array_key_exists('PHP_AUTH_USER',$_SERVER) ? $_SERVER['PHP_AUTH_USER'] : "";
 	$pass = array_key_exists('PHP_AUTH_PW',$_SERVER) ? $_SERVER['PHP_AUTH_PW'] : "";
 
-	$validated = apiDB::validate($user,$pass);
+	$message = "";
+	$validated = apiDB::validate($user,$pass,$message);
 
-	if ($validated < 0) {
+	if ($validated < -1) {
   		header('WWW-Authenticate: Basic realm="SASSCAL Weather"');
   		header('HTTP/1.0 401 Unauthorized');
-  		die ("Not authorized ".$validated);
+		die($message.$validated);
 	} else {
-		error_log("AUTHORIZED AS -".$user."- -".$pass."-");
-	}
-	
-	$args = explode('/', rtrim($_REQUEST['request'], '/'));
-	
-	
-	$firstclass = strtolower(array_shift($args));  //pop first object off the URL
-	
-	$extension = "html";
-	//ignore the extension if there is one.
-	if ((sizeof($args) == 0) && (strrpos($firstclass, ".") !== false)) {
-		$extension = substr($firstclass,strrpos($firstclass, ".")+1);
-		$firstclass = substr($firstclass,0,strrpos($firstclass, "."));
-	}
-	$firstclass = ($firstclass[strlen($firstclass) - 1] == 's') ? ucfirst(substr($firstclass, 0, strlen($firstclass) - 1)) : ucfirst($firstclass);
-	$reflector = new ReflectionClass($firstclass);
-	$object = $reflector->newInstance();
+		if ($validated < 0) {
+  			echo $message;
+		} else {
+			error_log("AUTHORIZED AS -".$user."- -".$pass."-");
 
-	$object->setupClass($args, $validated, $extension);
-    	echo $object->process();
+			$args = explode('/', rtrim($_REQUEST['request'], '/'));
+	
+	
+			$firstclass = strtolower(array_shift($args));  //pop first object off the URL
+	
+			$extension = "html";
+			//ignore the extension if there is one.
+			if ((sizeof($args) == 0) && (strrpos($firstclass, ".") !== false)) {
+				$extension = substr($firstclass,strrpos($firstclass, ".")+1);
+				$firstclass = substr($firstclass,0,strrpos($firstclass, "."));
+			}
+			$firstclass = ($firstclass[strlen($firstclass) - 1] == 's') ? ucfirst(substr($firstclass, 0, strlen($firstclass) - 1)) : ucfirst($firstclass);
+			$reflector = new ReflectionClass($firstclass);
+			$object = $reflector->newInstance();
+		
+			$object->setupClass($args, $validated, $extension);
+    			echo $object->process();
+		}
+	}
 	
 } catch (Exception $e) {
     echo json_encode(Array('error' => $e->getMessage()));
