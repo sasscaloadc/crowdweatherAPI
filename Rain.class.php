@@ -11,5 +11,9 @@ class Rain extends Measurement
 	public function tableName() {
 		return "rainmeasurement";
 	}
+
+	public function data() {
+		return "data called";
+	}
 	
 }

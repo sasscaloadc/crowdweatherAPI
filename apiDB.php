@@ -81,7 +81,8 @@ class apiDB {
 		$conxn = apiDB::getConnection();
 		
 		$user = new User();
-		$sql = "SELECT userid FROM userlocation WHERE locationid = ".$locationid;
+		$sql = "SELECT userid FROM location WHERE id = ".$locationid;
+		//$sql = "SELECT userid FROM userlocation WHERE locationid = ".$locationid;
 		$result = pg_query($conxn, $sql);
 		
 		if ($result && (pg_num_rows($result) > 0)) {
@@ -139,12 +140,15 @@ class apiDB {
 		$conn = apiDB::getConnection();
 		$locations = Array();
 		$sql = "SELECT l.*, CASE WHEN MAX(m.created) IS NULL THEN '1900-01-01' ELSE MAX(m.created) END AS createdtime FROM cw_user u 
-				INNER JOIN userlocation ul on ul.userid = u.id 
-				INNER JOIN location l on l.id = ul.locationid 
+				INNER JOIN location l on l.userid = u.id 
 				LEFT OUTER JOIN ".$col."measurement m on l.id = m.locationid
 			WHERE u.id = ".$userid." 
 			GROUP BY l.latitude, l.longitude, l.name, l.id
                         ORDER BY createdtime DESC ";
+
+		//		INNER JOIN userlocation ul on ul.userid = u.id 
+		//		INNER JOIN location l on l.id = ul.locationid 
+
 		$result = pg_query($conn, $sql);
 		if (count($result) > 0) {
 			while($row = pg_fetch_array($result)) {
@@ -171,7 +175,8 @@ class apiDB {
 		$conn = apiDB::getConnection();
 		$locations = Array();
 
-		$sql = "SELECT l.*, ul.userid FROM location l INNER JOIN userlocation ul on l.id = ul.locationid ";
+		$sql = "SELECT * FROM location ";
+		//$sql = "SELECT l.*, ul.userid FROM location l INNER JOIN userlocation ul on l.id = ul.locationid ";
 		$result = pg_query($conn, $sql);
 		if (count($result) > 0) {
 			while($row = pg_fetch_array($result)) {
@@ -198,7 +203,8 @@ class apiDB {
 		$conxn = apiDB::getConnection();
 
 		$location = new Location();
-		$sql = "SELECT l.*, ul.userid FROM location l INNER JOIN userlocation ul on l.id = ul.locationid WHERE id = ".$locationid;
+		$sql = "SELECT * FROM location WHERE id = ".$locationid;
+		//$sql = "SELECT l.*, ul.userid FROM location l INNER JOIN userlocation ul on l.id = ul.locationid WHERE id = ".$locationid;
 		$result = pg_query($conxn, $sql);
 		
 		if (pg_num_rows($result) > 0) {
@@ -223,7 +229,8 @@ class apiDB {
 		$conxn = apiDB::getConnection();
 
 		$location = new Location();
-		$sql = "SELECT * FROM location l INNER JOIN userlocation ul on l.id = ul.locationid WHERE id = ".$locationid." AND userid = ".$userid;
+		$sql = "SELECT * FROM location WHERE id = ".$locationid." AND userid = ".$userid;
+		//$sql = "SELECT * FROM location l INNER JOIN userlocation ul on l.id = ul.locationid WHERE id = ".$locationid." AND userid = ".$userid;
 		$result = pg_query($conxn, $sql);
 		if (pg_num_rows($result) > 0) {
 			$row = pg_fetch_array($result);
@@ -267,7 +274,7 @@ class apiDB {
 		pg_close($conxn);
 	}
 	
-	static function getLocationMeasurements($locationid, $userid, $classname, $level = 1) {
+	static function getLocationMeasurements($locationid, $userid, $classname, $month, $year, $level = 1) {
 		if (empty($locationid)) {
 			return "ERROR: GetLocationMeasurements called without valid location id ";
 		}
@@ -278,7 +285,12 @@ class apiDB {
 		$measurements = Array();
 		$reflector = new ReflectionClass($classname);
 		$msm = $reflector->newInstance();
-		$sql = "SELECT m.* FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid;
+		//$sql = "SELECT m.* FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid;
+		$sql = "SELECT m.*, date_part('day', fromdate) as day, ".$msm->columnName()."
+			FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid." 
+			and date_part('month', fromdate) = ((".$month." - 1) % 12) + 1
+			and date_part('year', fromdate) = ".$year."
+			order by 1 ";
 		$result = pg_query($conn, $sql);
 		if ($result) {
 			while($row = pg_fetch_array($result)) {
@@ -292,7 +304,10 @@ class apiDB {
 					$msm->userid = $userid;
 					$msm->note = $row["note"];
 				} else {
-					$msm = $row["id"];
+					$msm = Array();
+					array_push($msm, $row["id"]);
+					array_push($msm, $row["day"]);
+					array_push($msm, $row[$msm->columnName()]);
 				}
 				array_push($measurements, $msm);
 			}
@@ -376,7 +391,8 @@ class apiDB {
 			return "Error, no user id specified for deleting user";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "DELETE FROM userlocation WHERE userid = ".$userid." ; DELETE FROM cw_user WHERE id = ".$userid." RETURNING id; ";
+		$sql = "DELETE FROM cw_user WHERE id = ".$userid." RETURNING id; ";
+		//$sql = "DELETE FROM userlocation WHERE userid = ".$userid." ; DELETE FROM cw_user WHERE id = ".$userid." RETURNING id; ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_fetch_row($result); 
@@ -392,7 +408,8 @@ class apiDB {
 			return "Error, no email specified for deleting user";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "DELETE FROM userlocation WHERE userid = (SELECT id FROM cw_user WHERE email = '".$email."') ; DELETE FROM cw_user WHERE email = '".$email."' RETURNING id; ";
+		$sql = " DELETE FROM cw_user WHERE email = '".$email."' RETURNING id; ";
+		//$sql = "DELETE FROM userlocation WHERE userid = (SELECT id FROM cw_user WHERE email = '".$email."') ; DELETE FROM cw_user WHERE email = '".$email."' RETURNING id; ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_fetch_row($result); 
@@ -435,9 +452,9 @@ class apiDB {
 				return 404; //Not Found
 			}
 		} else {
-error_log("Hash : ".$hashkey);
-error_log("Token: ".$token);
-error_log("HashString: -*".$hashString."*-");
+//error_log("Hash : ".$hashkey);
+//error_log("Token: ".$token);
+//error_log("HashString: -*".$hashString."*-");
 			$message = "Invalid verification token for user " . $userid;
 			return 400; //Bad Request
 		}
@@ -464,9 +481,12 @@ error_log("HashString: -*".$hashString."*-");
 			$message = "Error, no name specified for location";
 			return 400;
 		}
+                $location->latitude = str_replace(",", ".", $location->latitude);
+                $location->longitude = str_replace(",", ".", $location->longitude);
 		$conxn = apiDB::getConnection();
-		$sql = "INSERT INTO location (latitude, longitude, name) values (".$location->latitude.",".$location->longitude.", '".$location->name."'); ";
-		$sql .= "INSERT INTO userlocation (userid, locationid) values (".$location->userid.", (SELECT id FROM location WHERE latitude = ".$location->latitude."  and longitude = ".$location->longitude." and name = '".$location->name."')) RETURNING locationid ";
+		$sql = "INSERT INTO location (latitude, longitude, name, userid) values (".$location->latitude.",".$location->longitude.", '".$location->name."', ".$location->userid.") RETURNING location.id ";
+		//$sql = "INSERT INTO location (latitude, longitude, name, userid) values (".$location->latitude.",".$location->longitude.", '".$location->name."'); ";
+		//$sql .= "INSERT INTO userlocation (userid, locationid) values (".$location->userid.", (SELECT id FROM location WHERE latitude = ".$location->latitude."  and longitude = ".$location->longitude." and name = '".$location->name."')) RETURNING locationid ";
 		
 		$result = pg_query($conxn, $sql);
 		if ($result) {
@@ -475,6 +495,7 @@ error_log("HashString: -*".$hashString."*-");
 			return 200;
 		} else { 
 			$message = "Error with insert query : ".pg_last_error($conxn);
+			error_log($message."\r\n", 3, "/var/tmp/auth.log");
 			return 400;
 		}
 	}
@@ -513,7 +534,8 @@ error_log("HashString: -*".$hashString."*-");
 			return "Error, no location id specified for deleting location";
 		}
 		$conxn = apiDB::getConnection();
-		$sql = "DELETE FROM userlocation WHERE locationid = ".$locationid." ; DELETE FROM rainmeasurement WHERE locationid = ".$locationid." ; DELETE FROM mintempmeasurement WHERE locationid = ".$locationid." ;DELETE FROM location WHERE id = ".$locationid." RETURNING id; ";
+		$sql = " DELETE FROM rainmeasurement WHERE locationid = ".$locationid." ; DELETE FROM mintempmeasurement WHERE locationid = ".$locationid." ;DELETE FROM location WHERE id = ".$locationid." RETURNING id; ";
+		//$sql = "DELETE FROM userlocation WHERE locationid = ".$locationid." ; DELETE FROM rainmeasurement WHERE locationid = ".$locationid." ; DELETE FROM mintempmeasurement WHERE locationid = ".$locationid." ;DELETE FROM location WHERE id = ".$locationid." RETURNING id; ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_fetch_row($result); 
@@ -552,9 +574,9 @@ error_log("HashString: -*".$hashString."*-");
 		$sql .= empty($measurement->note)? "" : ", '".$measurement->note."'";
 		$sql .= "); ";
 		$result = pg_query($conxn, $sql);
-error_log($sql);
-error_log(empty($measurement->note));
-error_log("-".$measurement->note."-");
+//error_log($sql);
+//error_log(empty($measurement->note));
+//error_log("-".$measurement->note."-");
 		if ($result) {
 			$rows = pg_affected_rows($result); 
 			$message = "Measurement Added: \"".$measurement->columnName()."\"";
@@ -622,16 +644,19 @@ error_log("-".$measurement->note."-");
 		}
 		$conxn = apiDB::getConnection();
 		$sql = "SELECT l.name, l.id AS locationid, r.id, r.rain AS measurement, r.fromdate::date as fromdate, r.todate::date as todate, (2147483640 - extract(epoch from r.created)) AS key, r.created as crtime, 'rain' AS mtype 
-                        FROM location l INNER JOIN userlocation ul ON l.id = ul.locationid 
-	                                LEFT OUTER JOIN rainmeasurement r ON r.locationid = ul.locationid
+                        FROM location l 
+	                                LEFT OUTER JOIN rainmeasurement r ON r.locationid = l.id
                         WHERE userid = ".$userid." AND r.created IS NOT NULL
                         UNION
                         SELECT l.name, l.id AS locationid, m.id, m.mintemp AS measurement, m.fromdate::date as fromdate, m.todate::date as todate, (2147483640 - extract(epoch from m.created)) AS key, m.created as crtime, 'mintemp' AS mtype 
-                        FROM location l INNER JOIN userlocation ul ON l.id = ul.locationid 
-	                        LEFT OUTER JOIN mintempmeasurement m ON m.locationid = ul.locationid
+                        FROM location l 
+	                        LEFT OUTER JOIN mintempmeasurement m ON m.locationid = l.id
                         WHERE userid = ".$userid." AND m.created IS NOT NULL
                         ORDER BY crtime DESC
                         LIMIT 20 ";
+
+                        //FROM location l INNER JOIN userlocation ul ON l.id = ul.locationid 
+
 		$result = pg_query($conxn, $sql);
                 $results_array = Array();
 		if ($result) {

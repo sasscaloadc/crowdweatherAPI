@@ -27,18 +27,21 @@ abstract class Measurement extends RESTObject
 	}
 	
 	public function get_array_all() {
+                $month = empty($_GET["month"]) ? date('m') : $_GET["month"];
+                $year = empty($_GET["year"]) ? date('Y') : $_GET["year"];
+
 		if (empty($this->userid)) {
 			$user = apiDB::getUserByEmail( $_SERVER['PHP_AUTH_USER'] );
 			$locations = apiDB::getUserLocations($user->id, $this->columnName());
 			if (count($locations) == 1) {
-				return apiDB::getLocationMeasurements($locations[0]->locationid, $user->userid, get_class($this));  
+				return apiDB::getLocationMeasurements($locations[0]->locationid, $user->userid, get_class($this), $month, $year);  
 			} else {
 				$error = Array();
 				$error["ERROR"] = "cannot display all measurements - please specify a location ID";
 				return $error;  //This is a hack
 			}
 		}
-		return apiDB::getLocationMeasurements($this->locationid, $this->userid, get_class($this));  
+		return apiDB::getLocationMeasurements($this->locationid, $this->userid, get_class($this), $month, $year);  
 	}
 
 	public function put_array($array) {
@@ -87,7 +90,7 @@ abstract class Measurement extends RESTObject
 		$measurement->fromdate = $array["fromdate"];
 		$measurement->todate = $array["todate"];
 		$measurement->locationid = $array["locationid"];
-		$measurement->note = $array["note"];
+		$measurement->note = array_key_exists("note",$array) ?  $array["note"] : "";
 		return apiDB::addMeasurement($measurement, $message);
 	}
 	
