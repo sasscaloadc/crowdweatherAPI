@@ -7,6 +7,15 @@ class User extends RESTObject
 {
 	public $email = '';
 	public $password = '';
+	public $access;
+	public $verified;
+	public $firstname;
+	public $lastname;
+	public $phone;
+	public $postal;
+	public $sub_summary;
+	public $sub_gwadi;
+	public $sub_stats;
 	public $locations = Array();
 	
 	public function get_array_instance() {
@@ -51,6 +60,15 @@ class User extends RESTObject
 		}
 		$user->email = empty($array["email"]) ? $user->email : $array["email"];
 		$user->password = empty($array["password"]) ? $user->password : $array["password"];
+		$user->verified = empty($array["verified"]) ? $user->verified : $array["verified"];
+		$user->firstname = empty($array["firstname"]) ? $user->firstname : $array["firstname"];
+		$user->lastname = empty($array["lastname"]) ? $user->lastname : $array["lastname"];
+		$user->postal = empty($array["postal"]) ? $user->postal : $array["postal"];
+		$user->phone = empty($array["phone"]) ? $user->phone : $array["phone"];
+		$user->sub_summary = empty($array["sub_summary"]) ? $user->sub_summary : $array["sub_summary"];
+		$user->sub_gwadi = empty($array["sub_gwadi"]) ? $user->sub_gwadi : $array["sub_gwadi"];
+		$user->sub_stats = empty($array["sub_stats"]) ? $user->sub_stats : $array["sub_stats"];
+
 		if ($this->access > 1) {
 			$user->access = empty($array["access"]) ? $user->access : $array["access"]; // not sure if this is still a security flaw... 
 		}
@@ -68,6 +86,14 @@ class User extends RESTObject
 		$user->email = $array["email"];
 		$user->password = $array["password"];
 		// access is 1 by database default
+		$user->verified = 0;
+		$user->firstname = $array["firstname"];
+		$user->lastname = $array["lastname"];
+		$user->postal = $array["postal"];
+		$user->phone = $array["phone"];
+		$user->sub_summary = 1;
+		$user->sub_gwadi = 1;
+		$user->sub_stats = 1;
 	
 		//NOTE: No access restrictions. Anyone with a login (also guest:guest) can add a newuser	
 		return apiDB::addUser($user, $message);

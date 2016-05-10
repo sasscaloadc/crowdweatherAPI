@@ -66,6 +66,15 @@ class apiDB {
 					$user->email = $row["email"];
 					$user->password = $row["password"];
 					$user->id = $row["id"];
+					$user->access = $row["access"];
+					$user->verified = $row["verified"];
+					$user->firstname = $row["firstname"];
+					$user->lastname = $row["lastname"];
+					$user->postal = $row["postal"];
+					$user->phone = $row["phone"];
+					$user->sub_summary = $row["sub_summary"];
+					$user->sub_gwadi = $row["sub_gwadi"];
+					$user->sub_stats = $row["sub_stats"];
 					$user->locations = apiDB::getUserLocations($user->id, $level - 1); 
 				} else {
 					$user = $row["id"];
@@ -120,6 +129,15 @@ class apiDB {
 				$user->email = $row["email"];
 				$user->password = $row["password"];
 				$user->id = $row["id"];
+				$user->access = $row["access"];
+				$user->verified = $row["verified"];
+				$user->firstname = $row["firstname"];
+				$user->lastname = $row["lastname"];
+				$user->postal = $row["postal"];
+				$user->phone = $row["phone"];
+				$user->sub_summary = $row["sub_summary"];
+				$user->sub_gwadi = $row["sub_gwadi"];
+				$user->sub_stats = $row["sub_stats"];
 				$user->locations = apiDB::getUserLocations($userid, $level - 1); 
 			} else {
 				$user = $row["id"];
@@ -347,8 +365,14 @@ class apiDB {
 			$message = "Error, no password specified for user";
 			return 400;
 		}
+		if (empty($user->verified)) $user->verified = 0;        // This is for the case of calling PUT on a user that doesn't exist.
+		if (empty($user->access)) $user->access = 1;            //                                  ||
+		if (empty($user->sub_summary)) $user->sub_summary = 0;  //                                  ||
+		if (empty($user->sub_gwadi)) $user->sub_gwadi = 0;      //                                  ||
+		if (empty($user->sub_stats)) $user->sub_stats = 0;      //                                  ||
+
 		$conxn = apiDB::getConnection();
-		$sql = "INSERT INTO cw_user (email, password) values ('".$user->email."', '".$user->password."') RETURNING id ";
+		$sql = "INSERT INTO cw_user (email, password, verified, firstname, lastname, postal, phone, sub_summary, sub_gwadi, sub_stats, access) values ('".$user->email."', '".$user->password."', $user->verified, '".$user->firstname."', '".$user->lastname."', '".$user->postal."', '".$user->phone."', $user->sub_summary, $user->sub_gwadi, $user->sub_stats, $user->access) RETURNING id ";
 		$result = pg_query($conxn, $sql);
 		if ($result) {
 			$rows = pg_affected_rows($result); 
@@ -371,9 +395,17 @@ class apiDB {
 		}
 
 		$updatestring = "set ";
-		$updatestring .= "email = ".(empty($user->email) ? "email" : "'".$user->email."'");
-		$updatestring .= ", ";
-		$updatestring .= "password = ".(empty($user->password) ? "password" : "'".$user->password."'");
+		$updatestring .= "email = ".(empty($user->email) ? "email" : "'".$user->email."'").", ";
+		$updatestring .= "password = ".(empty($user->password) ? "password" : "'".$user->password."'").", ";
+		$updatestring .= "firstname = ".(empty($user->firstname) ? "firstname" : "'".$user->firstname."'").", ";
+		$updatestring .= "lastname = ".(empty($user->lastname) ? "lastname" : "'".$user->lastname."'").", ";
+		$updatestring .= "postal = ".(empty($user->postal) ? "postal" : "'".$user->postal."'").", ";
+		$updatestring .= "phone = ".(empty($user->phone) ? "phone" : "'".$user->phone."'").", ";
+		$updatestring .= "verified = ".(empty($user->verified) ? "verified" : $user->verified).", ";
+		$updatestring .= "sub_summary = ".(empty($user->sub_summary) ? "sub_summary" : $user->sub_summary).", ";
+		$updatestring .= "sub_gwadi = ".(empty($user->sub_gwadi) ? "sub_gwadi" : $user->sub_gwadi).", ";
+		$updatestring .= "sub_stats = ".(empty($user->sub_stats) ? "sub_stats" : $user->sub_stats).", ";
+		$updatestring .= "access = ".(empty($user->access) ? "access" : $user->access);
 
 		$conxn = apiDB::getConnection();
 		$sql = "UPDATE cw_user ".$updatestring." WHERE id = ".$userid;
