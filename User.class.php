@@ -23,6 +23,13 @@ class User extends RESTObject
 		$array["email"] = $this->email;
 		$array["password"] = $this->password;
 		$array["id"] = $this->id;
+		$array["firstname"] = $this->firstname;
+		$array["lastname"] = $this->lastname;
+		$array["phone"] = $this->phone;
+		$array["postal"] = $this->postal;
+		$array["sub_summary"] = $this->sub_summary;
+		$array["sub_gwadi"] = $this->sub_gwadi;
+		$array["sub_stats"] = $this->sub_stats;
 		$array["locations"] = $this->locations;
 		return $array;
 	}
