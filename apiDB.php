@@ -11,11 +11,6 @@ class apiDB {
 /*
  *  These details can be stored in a .conf file
  */
-	static $servername = "afrihost.sasscal.org";
-	static $DBservername = "localhost";
-	static $username = "postgres";
-	static $password = "5455c4l_";
-	static $dbname = "crowdweather";
 
 	static function validate($username, $password, &$message) {
 		$conn = apiDB::getConnection();
@@ -44,9 +39,32 @@ class apiDB {
 		return substr(strrchr(dirname(__FILE__), "/"), 1);
 	}
 	
+	static function getServerName() {
+		$all_settings = parse_ini_file("/etc/sasscal/locker.ini",true);
+		$settings = $all_settings['rainapp'];
+		return $settings['servername'];
+	}
+		
+	static function getPWSalt() {
+		$all_settings = parse_ini_file("/etc/sasscal/locker.ini",true);
+		$settings = $all_settings['rainapp'];
+		return $settings['pw_salt'];
+	}
+		
 	static function getConnection() {
 		// Create connection
-		$conn = pg_pconnect("host=".apiDB::$DBservername." dbname=".apiDB::$dbname." user=".apiDB::$username." password=".apiDB::$password);
+
+		$all_settings = parse_ini_file("/etc/sasscal/locker.ini",true);
+	
+		$settings = $all_settings['rainapp'];
+
+		$servername = $settings['servername'];
+		$DBservername = $settings['DBservername'];
+		$username = $settings['username'];
+		$password = $settings['password'];
+		$dbname = $settings['dbname'];
+
+		$conn = pg_pconnect("host=".$DBservername." dbname=".$dbname." user=".$username." password=".$password);
 		if (!$conn) {
 			die("Database connection failed. ");
 		}
@@ -304,31 +322,56 @@ class apiDB {
 		$measurements = Array();
 		$reflector = new ReflectionClass($classname);
 		$msm = $reflector->newInstance();
-		//$sql = "SELECT m.* FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid;
-		$sql = "SELECT m.*, date_part('day', fromdate) as day, ".$msm->columnName()."
-			FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid." 
-			and date_part('month', fromdate) = ((".$month." - 1) % 12) + 1
-			and date_part('year', fromdate) = ".$year."
-			order by 1 ";
-		$result = pg_query($conn, $sql);
-		if ($result) {
-			while($row = pg_fetch_array($result)) {
-				if ($level > 0) {
-					$msm = $reflector->newInstance();
-					$msm->id = $row["id"];
-					$msm->reading = $row[$msm->columnName()];
-					$msm->fromdate = $row["fromdate"];
-					$msm->todate = $row["todate"];
-					$msm->locationid = $row["locationid"];
-					$msm->userid = $userid;
-					$msm->note = $row["note"];
-				} else {
+
+		if (empty($month)) {  // sum rain for whole season
+			$sql = "SELECT *, SUM(month_rain) OVER () AS season_rain  
+				FROM (
+					SELECT date_part('month', fromdate) AS month, date_part('year', fromdate) AS year, 
+						SUM(".$msm->columnName().") AS month_rain
+					FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid."
+					AND (    (date_part('month', fromdate) >= 7 AND date_part('year', fromdate) = ".$year." - 1) 
+	      				OR (date_part('month', fromdate) < 7  AND date_part('year', fromdate) = ".$year.")      )
+					GROUP BY 2, 1
+					ORDER BY 2, 1
+				) a ";
+			$result = pg_query($conn, $sql);
+			if ($result) {
+				while($row = pg_fetch_array($result)) {
 					$msm = Array();
-					array_push($msm, $row["id"]);
-					array_push($msm, $row["day"]);
-					array_push($msm, $row[$msm->columnName()]);
+					array_push($msm, $row["month"]);
+					array_push($msm, $row["year"]);
+					array_push($msm, $row["month_rain"]);
+					array_push($msm, $row["season_rain"]);
+					array_push($measurements, $msm);
 				}
-				array_push($measurements, $msm);
+			}
+		} else {
+			$sql = "SELECT m.*, date_part('day', fromdate) as day, ".$msm->columnName()."
+				FROM ".$msm->tableName()." m WHERE m.locationid = ".$locationid." 
+				and date_part('month', fromdate) = ((".$month." - 1) % 12) + 1
+				and date_part('year', fromdate) = ".$year."
+				order by 1 ";
+	
+			$result = pg_query($conn, $sql);
+			if ($result) {
+				while($row = pg_fetch_array($result)) {
+					if ($level > 0) {
+						$msm = $reflector->newInstance();
+						$msm->id = $row["id"];
+						$msm->reading = $row[$msm->columnName()];
+						$msm->fromdate = $row["fromdate"];
+						$msm->todate = $row["todate"];
+						$msm->locationid = $row["locationid"];
+						$msm->userid = $userid;
+						$msm->note = $row["note"];
+					} else {
+						$msm = Array();
+						array_push($msm, $row["id"]);
+						array_push($msm, $row["day"]);
+						array_push($msm, $row[$msm->columnName()]);
+					}
+					array_push($measurements, $msm);
+				}
 			}
 		}
 		pg_close($conn);
@@ -403,9 +446,9 @@ class apiDB {
 		$updatestring .= "postal = ".(empty($user->postal) ? "postal" : "'".$user->postal."'").", ";
 		$updatestring .= "phone = ".(empty($user->phone) ? "phone" : "'".$user->phone."'").", ";
 		$updatestring .= "verified = ".(empty($user->verified) ? "verified" : $user->verified).", ";
-		$updatestring .= "sub_summary = ".(empty($user->sub_summary) ? "sub_summary" : $user->sub_summary).", ";
-		$updatestring .= "sub_gwadi = ".(empty($user->sub_gwadi) ? "sub_gwadi" : $user->sub_gwadi).", ";
-		$updatestring .= "sub_stats = ".(empty($user->sub_stats) ? "sub_stats" : $user->sub_stats).", ";
+		$updatestring .= "sub_summary = ".(isset($user->sub_summary) ? $user->sub_summary : "sub_summary").", ";
+		$updatestring .= "sub_gwadi = ".(isset($user->sub_gwadi) ? $user->sub_gwadi : "sub_gwadi").", ";
+		$updatestring .= "sub_stats = ".(isset($user->sub_stats) ? $user->sub_stats : "sub_stats").", ";
 		$updatestring .= "access = ".(empty($user->access) ? "access" : $user->access);
 
 		$conxn = apiDB::getConnection();

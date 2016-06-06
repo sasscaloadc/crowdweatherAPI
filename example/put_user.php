@@ -24,10 +24,10 @@
 	
 
 $data = Array();
-$data["id"] = "2";
+$data["id"] = "359";
 //$data["email"] = "steve@biggerstuff.com";
 //$data["password"] = "didntspilladrop";
-$data["access"] = "2";
+$data["sub_gwadi"] = "0";
 
 
 $fields = json_encode($data);
@@ -40,9 +40,9 @@ $ch = curl_init();
 
 //curl_setopt($ch, CURLOPT_URL, "https://erik%40sas.co.na:qwe123@afrihost.sasscal.org/api/users");
 curl_setopt($ch, CURLOPT_URL, "https://afrihost.sasscal.org/api/users");
-//curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
+curl_setopt($ch, CURLOPT_USERPWD, "erik@sas.co.na:qwe123");
 //curl_setopt($ch, CURLOPT_USERPWD, "steve@biggerstuff.com:didntspill");
-curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");
+//curl_setopt($ch, CURLOPT_USERPWD, "guest:guest");
 
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
 //curl_setopt($ch, CURLOPT_CAPATH, "/home/syseng/certificates/"); 

@@ -46,7 +46,6 @@ class User extends RESTObject
 	}
 
 	public function put_array($array) {
-		
 		if ($this->access < 1) {
 			return "Not authorized to make any updates : guest account";
 		}
@@ -72,9 +71,9 @@ class User extends RESTObject
 		$user->lastname = empty($array["lastname"]) ? $user->lastname : $array["lastname"];
 		$user->postal = empty($array["postal"]) ? $user->postal : $array["postal"];
 		$user->phone = empty($array["phone"]) ? $user->phone : $array["phone"];
-		$user->sub_summary = empty($array["sub_summary"]) ? $user->sub_summary : $array["sub_summary"];
-		$user->sub_gwadi = empty($array["sub_gwadi"]) ? $user->sub_gwadi : $array["sub_gwadi"];
-		$user->sub_stats = empty($array["sub_stats"]) ? $user->sub_stats : $array["sub_stats"];
+		$user->sub_summary = isset($array["sub_summary"]) ? $array["sub_summary"] : $user->sub_summary;
+		$user->sub_stats = isset($array["sub_stats"]) ? $array["sub_stats"] : $user->sub_stats;
+		$user->sub_gwadi = isset($array["sub_gwadi"]) ? $array["sub_gwadi"] : $user->sub_gwadi;
 
 		if ($this->access > 1) {
 			$user->access = empty($array["access"]) ? $user->access : $array["access"]; // not sure if this is still a security flaw... 
@@ -163,7 +162,7 @@ class User extends RESTObject
 	 }
 
      function apiLink() {
-		$linkString = "https://".apiDB::$servername."/".apiDB::dirname()."/users/" . $this->id ;
+		$linkString = "https://".apiDB::getServerName()."/".apiDB::dirname()."/users/" . $this->id ;
 		return "<a href=\"".$linkString."\">".$this->email."</a>";
 	}
 

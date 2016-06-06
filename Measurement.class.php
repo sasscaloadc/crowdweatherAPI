@@ -27,9 +27,13 @@ abstract class Measurement extends RESTObject
 	}
 	
 	public function get_array_all() {
-                $month = empty($_GET["month"]) ? date('m') : $_GET["month"];
-                $year = empty($_GET["year"]) ? date('Y') : $_GET["year"];
-
+		if (empty($_GET["month"]) && (!empty($_GET["year"]))) {
+			$year = $_GET["year"];
+			$month = '';
+		} else {
+                	$year = empty($_GET["year"]) ? date('Y') : $_GET["year"];
+	                $month = empty($_GET["month"]) ? date('m') : $_GET["month"];
+		}
 		if (empty($this->userid)) {
 			$user = apiDB::getUserByEmail( $_SERVER['PHP_AUTH_USER'] );
 			$locations = apiDB::getUserLocations($user->id, $this->columnName());
@@ -135,7 +139,7 @@ abstract class Measurement extends RESTObject
 	function apiLink() {
 		$useridString = empty($this->userid) ? "" : "/users/".$this->userid;
 		$locationidString = empty($this->locationid) ? "" : "/locations/".$this->locationid;
-		$linkString = "https://".apiDB::$servername."/".apiDB::dirname().$useridString.$locationidString."/".$this->columnName()."/" . $this->id ;
+		$linkString = "https://".apiDB::getServerName()."/".apiDB::dirname().$useridString.$locationidString."/".$this->columnName()."/" . $this->id ;
 		return "<a href=\"".$linkString."\">".$this->fromdate."->".$this->todate."</a>";
 	}
 	

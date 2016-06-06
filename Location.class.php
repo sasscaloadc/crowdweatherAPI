@@ -13,7 +13,7 @@ class Location extends RESTObject
 
 	function apiLink() {
 		$useridString = empty($this->userid) ? "" : "/users/".$this->userid;
-		$linkString = "https://".apiDB::$servername."/".apiDB::dirname().$useridString."/locations/" . $this->id ;
+		$linkString = "https://".apiDB::getServerName()."/".apiDB::dirname().$useridString."/locations/" . $this->id ;
 		return "<a href=\"".$linkString."\">".$this->name."</a>";
 	}
 

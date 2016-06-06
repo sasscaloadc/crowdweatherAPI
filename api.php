@@ -12,7 +12,7 @@ try {
 	$user = array_key_exists('PHP_AUTH_USER',$_SERVER) ? $_SERVER['PHP_AUTH_USER'] : "";
 	$pass = array_key_exists('PHP_AUTH_PW',$_SERVER) ? $_SERVER['PHP_AUTH_PW'] : "";
 
-	$pass_hash = substr(crypt($pass, '$2y$09$vpreflR40fkWFq1KWzsfkO$'), 29);
+	$pass_hash = substr(crypt($pass, '$2y$09$'.apiDB::getPWSalt().'$'), 29);
 
 	$message = "";
 	$validated = apiDB::validate($user,$pass_hash,$message);
